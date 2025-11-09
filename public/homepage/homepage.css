@@ -462,7 +462,7 @@
 }
 
 .cta-button {
-  background-color: #c1ccc9;
+  background-color: #002d82;
   color: white;
   padding: 12px 28px;
   font-size: 16px;
@@ -672,4 +672,109 @@ select {
 .help-button-link:hover {
   background-color: #0040aa;
   transform: scale(1.05);
+}
+
+
+.title {
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-top: 30px;
+  color: #333;
+}
+
+/* Carousel container */
+.carousel-container {
+  position: relative;
+  width: 90%;
+  margin: 40px auto;
+  overflow: hidden;
+}
+
+/* Slider holding cards */
+.cards-slider {
+  display: grid;
+  grid-template-rows: repeat(2, auto);
+  grid-auto-flow: column;
+  grid-gap: 20px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+.cards-slider::-webkit-scrollbar {
+  display: none;
+}
+
+/* Each card */
+.card-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.card {
+  width: 250px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  text-align: center;
+  transition: transform 0.3s;
+}
+.card:hover {
+  transform: translateY(-5px);
+}
+.card img {
+  width: 100%;
+  border-radius: 12px;
+  height: 150px;
+  object-fit: cover;
+}
+.card h3 {
+  margin-top: 10px;
+  font-size: 1.1rem;
+  color: #333;
+}
+.card button {
+  margin-top: 8px;
+  background: #0040aa;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.card button:hover {
+  background: #0056b3;
+}
+
+/* Arrows */
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #0040aa;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 50%;
+  z-index: 5;
+  transition: 0.3s;
+}
+.carousel-btn:hover {
+  background: #0056b3;
+}
+.left-btn {
+  left: -10px;
+}
+.right-btn {
+  right: -10px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card {
+    width: 200px;
+  }
 }

@@ -129,7 +129,7 @@ document.addEventListener("DOMContentLoaded", function () {
         .then((response) => response.json())
         .then((data) => {
           if (data.message === "Logged out successfully") {
-            window.location.href = "../login/login.html";
+            window.location.href = "../landingpage/landingpage.html";
           } else {
             alert("Logout failed: " + data.message);
           }

@@ -288,3 +288,29 @@ function discardChanges() {
 
 //   // The rest of your existing JS functions (saveItem, searchInventory, etc.) follow here...
 // });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
