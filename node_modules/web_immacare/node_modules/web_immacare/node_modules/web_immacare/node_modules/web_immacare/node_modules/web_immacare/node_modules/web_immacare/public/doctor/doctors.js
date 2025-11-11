@@ -154,7 +154,7 @@ function checkSpecialty(specialtyId) {
     case 15:
       return "Internal Medicine";
     case 16:
-      return "Urologist";
+      return "Urology";
     case 17:
       return "ENT";
     case 18:

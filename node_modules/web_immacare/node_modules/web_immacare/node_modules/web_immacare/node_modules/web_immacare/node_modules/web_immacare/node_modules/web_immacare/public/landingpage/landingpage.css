@@ -8,7 +8,7 @@ body {
 }
 
 .header_logo {
-  height: 3cm;
+  height: 3.5cm;
   width: auto;
   max-width: 100%;
   margin-left: 20px;
@@ -40,22 +40,11 @@ body {
   color: #ffd700;
 }
 
-.navbar a::after {
-  content: "";
-  position: absolute;
-  bottom: -5px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background-color: #ffd700;
-  transition: width 0.2s;
-}
-.navbar a.active::after {
-  width: 100%;
-}
+
 
 .navbar a.active {
-  color: #ffd700;
+  color: white;
+  font-size: 25px;
   /* REMOVED: margin-bottom: 105px; */
 }
 .navbar a:hover::after {
@@ -233,7 +222,7 @@ body {
   color: white;
   font-size: 24px;
   cursor: pointer;
-  padding: 8px 12px;
+  padding: 3px 15px;
   border-radius: 50%;
   z-index: 5;
   transition: 0.3s;
@@ -242,10 +231,10 @@ body {
   background: #0056b3;
 }
 .left-btn {
-  left: -10px;
+  left: 0px;
 }
 .right-btn {
-  right: -10px;
+  right: 0px;
 }
 
 /* Responsive */
