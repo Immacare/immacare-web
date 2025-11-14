@@ -128,11 +128,11 @@ const transporter = nodemailer.createTransport({
         pass: "kemc tadf myzz ofzq",
     },
 });
+// --- Initial Route Fix ---
+// The root route (/) now directly serves the landing page from its nested location
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "web_immacare", "landingpage", "landingpage.html")));
 
-// Change the root route from serving 'main.html' to redirecting to '/landing'
-app.get("/", (req, res) => res.redirect("/landingpage.html")); 
-
-// Change the /landing route to use the correct path based on your file structure
+// We can keep the /landing route as a fallback or custom endpoint if needed:
 app.get("/landing", (req, res) => res.sendFile(path.join(__dirname, "web_immacare", "landingpage", "landingpage.html")));
 
 // =================================================================
