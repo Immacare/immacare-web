@@ -133,7 +133,7 @@ const transporter = nodemailer.createTransport({
 app.get("/", (req, res) => res.redirect("/landingpage.html")); 
 
 // Change the /landing route to use the correct path based on your file structure
-app.get("/landingpage.html", (req, res) => res.sendFile(path.join(__dirname, "landingpage.html", "landingpage.html")));
+app.get("/landing", (req, res) => res.sendFile(path.join(__dirname, "web_immacare", "landingpage", "landingpage.html")));
 
 // =================================================================
 // --- AUTHENTICATION & REGISTRATION API ENDPOINTS ---
