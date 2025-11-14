@@ -129,18 +129,11 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// serve static file (css, js, images)
-app.use(express.static(path.join(__dirname, "public")));
-
 // Change the root route from serving 'main.html' to redirecting to '/landing'
 app.get("/", (req, res) => res.redirect("/landingpage.html")); 
 
 // Change the /landing route to use the correct path based on your file structure
-<<<<<<< HEAD
 app.get("/landing", (req, res) => res.sendFile(path.join(__dirname, "web_immacare", "landingpage", "landingpage.html")));
-=======
-app.get("/landing", (req, res) => res.sendFile(path.join(__dirname, "public", "landingpage", "landingpage.html")));
->>>>>>> 79499263a5a4129ac48854e7bf148ab5f08f666a
 
 // =================================================================
 // --- AUTHENTICATION & REGISTRATION API ENDPOINTS ---
@@ -824,7 +817,7 @@ app.get("/getAllPatients", async (req, res) => {
 // --- Server Start ---
 const PORT = process.env.PORT || 3000; // <--- ADD || 3000 FOR LOCAL FALLBACK
 app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}/landing`);
+  console.log(`Server is running at http://localhost:${PORT}/landingpage/landingpage.html`);
 });
 
 
