@@ -129,11 +129,14 @@ const transporter = nodemailer.createTransport({
     },
 });
 // --- Initial Route Fix ---
-// The root route (/) now directly serves the landing page from its nested location
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "web_immacare", "landingpage", "landingpage.html")));
+// --- Initial Route Fix ---
+// 1. Root route: This redirect is correct because 'public' is a static directory.
+// The browser requests /landingpage/landingpage.html, which Express finds in /public.
+app.get("/", (req, res) => res.redirect("/landingpage/landingpage.html")); 
 
-// We can keep the /landing route as a fallback or custom endpoint if needed:
-app.get("/landing", (req, res) => res.sendFile(path.join(__dirname, "web_immacare", "landingpage", "landingpage.html")));
+// 2. The /landing route (Absolute Path) MUST be corrected to include the 'public' folder.
+// This is the line that was failing on the deployment server.
+app.get("/landing", (req, res) => res.sendFile(path.join(__dirname, "public", "landingpage", "landingpage.html")));
 
 // =================================================================
 // --- AUTHENTICATION & REGISTRATION API ENDPOINTS ---
