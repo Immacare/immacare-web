@@ -129,8 +129,10 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// --- Routes ---
-app.get("/", (req, res) => res.redirect("/landing"));
+// Change the root route from serving 'main.html' to redirecting to '/landing'
+app.get("/", (req, res) => res.redirect("/landing")); 
+
+// Change the /landing route to use the correct path based on your file structure
 app.get("/landing", (req, res) => res.sendFile(path.join(__dirname, "web_immacare", "landingpage", "landingpage.html")));
 
 // =================================================================
@@ -812,11 +814,11 @@ app.get("/getAllPatients", async (req, res) => {
 
 
 // --- Server Start ---
-const PORT = process.env.PORT || 3000;
+// --- Server Start ---
+const PORT = process.env.PORT || 3000; // <--- ADD || 3000 FOR LOCAL FALLBACK
 app.listen(PORT, () => {
-  console.log(`Server is running athttp://localhost:${PORT}/landingpage/landingpage.html`);
+  console.log(`Server is running at http://localhost:${PORT}/landingpage/landingpage.html`);
 });
-
 
 
 
