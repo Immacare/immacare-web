@@ -32,7 +32,6 @@
       </div>
       <div class="container mt-5">
         <div class="row mb-3">
-          <!-- Left side -->
           <div class="col-md-5 d-flex align-items-center">
             <label for="date" class="col-sm-4 col-form-label"
               >Booked Date:</label
@@ -48,7 +47,6 @@
             </div>
           </div>
 
-          <!-- Right side -->
           <div class="col-md-5 d-flex align-items-center">
             <label for="patientName" class="col-sm-4 col-form-label"
               >Patient Name:</label
@@ -75,7 +73,6 @@
           </div>
         </div>
         <div class="row mb-3">
-          <!-- Left side -->
           <div class="col-md-5 d-flex align-items-center">
             <label for="status" class="col-sm-4 col-form-label">Status:</label>
             <div class="col-sm-8">
@@ -90,7 +87,6 @@
             </div>
           </div>
 
-          <!-- Right side -->
           <div class="col-md-5 d-flex align-items-center">
             <label for="consultationType" class="col-sm-4 col-form-label"
               >Consultation type:</label
@@ -153,12 +149,10 @@
           </tr>
         </thead>
       </table>
-
       <input type="hidden" id="booking_id" />
       <input type="hidden" id="queue_no" />
     </div>
 
-    <!-- GENERATE QUEUE NUMBER -->
     <div
       class="modal fade"
       id="bookingModal"
@@ -193,7 +187,8 @@
                 <label
                   id="labelConsultationType"
                   class="form-control-plaintext"
-                ></label>
+                >
+                </label>
               </div>
             </div>
 
@@ -201,13 +196,12 @@
               <label
                 for="labelBookedDate"
                 class="col-sm-5 col-form-label text-end"
-                ><strong>Date:</strong></label
               >
+                <strong>Date:</strong>
+              </label>
               <div class="col-sm-7">
-                <label
-                  id="labelBookedDate"
-                  class="form-control-plaintext"
-                ></label>
+                <label id="labelBookedDate" class="form-control-plaintext">
+                </label>
               </div>
             </div>
 
@@ -215,13 +209,12 @@
               <label
                 for="labelBookedTime"
                 class="col-sm-5 col-form-label text-end"
-                ><strong>Time:</strong></label
               >
+                <strong>Time:</strong>
+              </label>
               <div class="col-sm-7">
-                <label
-                  id="labelBookedTime"
-                  class="form-control-plaintext"
-                ></label>
+                <label id="labelBookedTime" class="form-control-plaintext">
+                </label>
               </div>
             </div>
             <hr />
@@ -230,20 +223,19 @@
               <label
                 for="labelFullname"
                 class="col-sm-5 col-form-label text-end"
-                ><strong>Fullname:</strong></label
               >
+                <strong>Fullname:</strong>
+              </label>
               <div class="col-sm-7">
-                <label
-                  id="labelFullname"
-                  class="form-control-plaintext"
-                ></label>
+                <label id="labelFullname" class="form-control-plaintext">
+                </label>
               </div>
             </div>
 
             <div class="row mb-3 align-items-center">
-              <label for="labelGender" class="col-sm-5 col-form-label text-end"
-                ><strong>Gender:</strong></label
-              >
+              <label for="labelGender" class="col-sm-5 col-form-label text-end">
+                <strong>Gender:</strong>
+              </label>
               <div class="col-sm-7">
                 <label id="labelGender" class="form-control-plaintext"></label>
               </div>
@@ -259,7 +251,6 @@
             </div>
           </div>
           <div class="modal-footer d-flex justify-content-between w-100">
-            <!-- Centered Button Wrapper -->
             <div class="d-flex justify-content-center w-100">
               <button
                 type="button"
@@ -288,17 +279,10 @@
                 Reschedule Booking
               </button>
             </div>
-
-            <!-- Right-Aligned Link -->
-            <!-- <a href="../patient/patient_profile.html" class="ms-auto">
-              See Patient Info
-            </a> -->
           </div>
         </div>
       </div>
     </div>
-
-    <!-- CANCEL/RESCHED MODAL -->
     <div
       class="modal fade"
       id="reschedModal"
@@ -365,7 +349,6 @@
             </div>
           </div>
           <div class="modal-footer d-flex justify-content-between w-100">
-            <!-- Centered Button Wrapper -->
             <div class="d-flex justify-content-center w-100">
               <button
                 type="button"
@@ -381,7 +364,6 @@
       </div>
     </div>
 
-    <!-- TAG BOOKING -->
     <div
       class="modal fade"
       id="tagModal"

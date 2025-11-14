@@ -11,9 +11,7 @@ form.addEventListener("submit", async (e) => {
       e.preventDefault(); // prevent default form submission
 
       const email = document.querySelector('input[name="email"]').value;
-      const password = document.querySelector(
-        'input[name="password"]'
-      ).value;
+      const password = document.querySelector('input[name="password"]').value;
 
       try {
         const res = await fetch("/login", {
@@ -47,7 +45,6 @@ form.addEventListener("submit", async (e) => {
     const data = await response.json();
 
     if (response.ok) {
-     
     } else {
       alert(data.message); // e.g., "Invalid credentials"
     }
@@ -57,24 +54,26 @@ form.addEventListener("submit", async (e) => {
   }
 });
 //mata
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener("DOMContentLoaded", function () {
   console.log("✅ login.js is loaded!");
 
-  const togglePassword = document.querySelector('#togglePassword');
-  const password = document.querySelector('#password');
+  const togglePassword = document.querySelector("#togglePassword");
+  const password = document.querySelector("#password");
 
   console.log("togglePassword:", togglePassword);
   console.log("password:", password);
 
   if (togglePassword && password) {
-    togglePassword.addEventListener('click', function () {
-      const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
-      password.setAttribute('type', type);
+    togglePassword.addEventListener("click", function () {
+      const type =
+        password.getAttribute("type") === "password" ? "text" : "password";
+      password.setAttribute("type", type);
 
       // Change icon
-      this.innerHTML = type === 'password'
-        ? '<i class="bi bi-eye"></i>'
-        : '<i class="bi bi-eye-slash"></i>';
+      this.innerHTML =
+        type === "password"
+          ? '<i class="bi bi-eye"></i>'
+          : '<i class="bi bi-eye-slash"></i>';
     });
   } else {
     console.error(" Element(s) not found. Check your IDs!");
