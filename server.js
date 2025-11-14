@@ -130,7 +130,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // --- Routes ---
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "web_immacare", "main.html")));
+app.get("/", (req, res) => res.redirect("/landing"));
 app.get("/landing", (req, res) => res.sendFile(path.join(__dirname, "landing", "landingpage.html")));
 
 // =================================================================
@@ -812,7 +812,7 @@ app.get("/getAllPatients", async (req, res) => {
 
 
 // --- Server Start ---
-const PORT = 3000;
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server is running athttp://localhost:${PORT}/landingpage/landingpage.html`);
 });
