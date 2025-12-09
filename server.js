@@ -2118,9 +2118,9 @@ app.use(
 // Serve jQuery library (dependency for Bootstrap and DataTables)
 app.use("/jquery", express.static(__dirname + "/node_modules/jquery/dist"));
 
-// Root route - serves the main HTML page
+// Root route - redirect to landing page
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "web_immacare", "main.html"));
+  res.redirect("/landingpage/landingpage.html");
 });
 
 // ============================================================================
