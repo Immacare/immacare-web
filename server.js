@@ -2873,8 +2873,8 @@ Provide recommendations for proactive patient care, follow-up scheduling, and pr
 // ============================================================================
 // SECTION 6: SERVER CONFIGURATION AND STARTUP
 // ============================================================================
-// Server port configuration (default: 3000)
-const PORT = 3000;
+// Server port configuration - use environment variable for production (Render uses PORT)
+const PORT = process.env.PORT || 3000;
 
 // Default URL to open when server starts
 const TARGET_URL = `http://localhost:${PORT}/landingpage/landingpage.html`;
@@ -2882,27 +2882,28 @@ const TARGET_URL = `http://localhost:${PORT}/landingpage/landingpage.html`;
 // Start the Express server and optionally open browser
 // Listen on 0.0.0.0 to allow access from mobile devices on the same network
 app.listen(PORT, '0.0.0.0', async () => {
-  console.log(`Server is running at ${TARGET_URL}`);
+  console.log(`Server is running on port ${PORT}`);
   console.log(`Server is accessible from network at http://<your-ip>:${PORT}`);
 
-  // Attempt to automatically open the application in Chrome browser
-  // This is useful for development but can be disabled in production
-  try {
-    const open = await import("open");
+  // Only open browser in development mode (not in production/cloud)
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const open = await import("open");
 
-    open.default(TARGET_URL, {
-      app: {
-        name: open.apps.chrome
-      }
-    })
-      .then(() => {
-        console.log('Opened in Chrome!');
+      open.default(TARGET_URL, {
+        app: {
+          name: open.apps.chrome
+        }
       })
-      .catch((err) => {
-        console.error('Failed to open URL in Chrome:', err.message);
-      });
-  } catch (err) {
-    console.error('Error loading the "open" module:', err);
+        .then(() => {
+          console.log('Opened in Chrome!');
+        })
+        .catch((err) => {
+          console.error('Failed to open URL in Chrome:', err.message);
+        });
+    } catch (err) {
+      console.error('Error loading the "open" module:', err);
+    }
   }
 });
 
