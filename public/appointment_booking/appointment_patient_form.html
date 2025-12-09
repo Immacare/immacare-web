@@ -253,13 +253,16 @@
           </label>
           <div class="col-sm-6">
             <input
-              type="text"
+              type="tel"
               class="form-control"
               id="mobileNum3"
               name="mobileNum3"
-              maxlength="11"
-              placeholder="Enter 11-digit number"
+              maxlength="12"
+              pattern="[0-9]{12}"
+              placeholder="639999999999"
+              inputmode="numeric"
             />
+            <small class="form-text text-muted">Mobile number must be 12 digits (including 639).</small>
           </div>
         </div>
         <div class="d-flex justify-content-between">

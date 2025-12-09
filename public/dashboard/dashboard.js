@@ -40,6 +40,39 @@
 //   alert("Error loading data. Please try again.");
 // }
 
+/**
+ * Dashboard JavaScript
+ * 
+ * PURPOSE:
+ * Manages the admin/staff dashboard interface. Loads and displays statistics,
+ * manages DataTables for various data views, and provides functions to switch
+ * between different dashboard views (appointments, patients, inventory).
+ * 
+ * FUNCTIONALITY:
+ * 1. Initializes DataTables for data display
+ * 2. Loads dashboard statistics (appointment counts, patient counts, inventory counts)
+ * 3. Provides functions to display different data views:
+ *    - PatientToday() - Shows today's patients
+ *    - Bookings() - Shows all bookings
+ *    - getInventory() - Shows inventory items
+ *    - getAllPatients() - Shows all patients
+ * 
+ * API ENDPOINTS USED:
+ * - GET /appointment-count - Total booked appointments
+ * - GET /appointment-count-today - Today's appointments
+ * - GET /overall_patients - Total patient count
+ * - GET /item-inventory-count - Total inventory items
+ * - GET /getPatientsToday - Today's patient list
+ * - GET /getBookings - All bookings list
+ * - GET /getInventoryDashboard - Inventory items list
+ * - GET /getAllPatients - All patients list
+ * 
+ * DEPENDENCIES:
+ * - jQuery
+ * - DataTables (for table functionality)
+ * - Chart.js (commented out, available for future charts)
+ */
+
 $(document).ready(function () {
   const table = $("#dashboardTable").DataTable({
     searching: false,
@@ -88,24 +121,33 @@ $(document).ready(function () {
   //   },
   // });
 
+  // ============================================================================
+  // LOAD DASHBOARD STATISTICS
+  // ============================================================================
+  // These AJAX calls fetch and display key statistics on the dashboard
+  
+  // Load total booked appointments count
   $.get("/appointment-count", function (data) {
     $("#appointmentCount").text(data.total_booked);
   }).fail(function (xhr) {
     alert(xhr.responseJSON.message);
   });
 
+  // Load today's appointment count
   $.get("/appointment-count-today", function (data) {
     $("#patientTodayCount").text(data.total_booked_today);
   }).fail(function (xhr) {
     alert(xhr.responseJSON.message);
   });
 
+  // Load total patient count
   $.get("/overall_patients", function (data) {
     $("#patientCount").text(data.patient_count);
   }).fail(function (xhr) {
     alert(xhr.responseJSON.message);
   });
 
+  // Load total inventory items count
   $.get("/item-inventory-count", function (data) {
     $("#inventoryCount").text(data.inventory_count);
   }).fail(function (xhr) {
@@ -113,6 +155,16 @@ $(document).ready(function () {
   });
 });
 
+/**
+ * PatientToday
+ * Purpose: Display list of patients with appointments today
+ * 
+ * Process:
+ *   1. Destroys existing DataTable if present
+ *   2. Fetches today's patients from API
+ *   3. Initializes DataTable with patient data
+ *   4. Displays table with patient name, consultation type, and status
+ */
 function PatientToday() {
   if ($.fn.DataTable.isDataTable("#dashboardTable")) {
     $("#dashboardTable").DataTable().destroy();
@@ -152,6 +204,16 @@ function PatientToday() {
   });
 }
 
+/**
+ * Bookings
+ * Purpose: Display list of all bookings/appointments
+ * 
+ * Process:
+ *   1. Destroys existing DataTable if present
+ *   2. Fetches all bookings from API
+ *   3. Initializes DataTable with booking data
+ *   4. Displays table with patient name, consultation type, and status
+ */
 function Bookings() {
   if ($.fn.DataTable.isDataTable("#dashboardTable")) {
     $("#dashboardTable").DataTable().destroy();
@@ -189,6 +251,16 @@ function Bookings() {
   });
 }
 
+/**
+ * getInventory
+ * Purpose: Display list of inventory items
+ * 
+ * Process:
+ *   1. Destroys existing DataTable if present
+ *   2. Fetches inventory items from API
+ *   3. Initializes DataTable with inventory data
+ *   4. Displays table with item name, category, quantity, and status
+ */
 function getInventory() {
   if ($.fn.DataTable.isDataTable("#dashboardTable")) {
     $("#dashboardTable").DataTable().destroy();
@@ -227,6 +299,16 @@ function getInventory() {
   });
 }
 
+/**
+ * getAllPatients
+ * Purpose: Display list of all patients in the system
+ * 
+ * Process:
+ *   1. Destroys existing DataTable if present
+ *   2. Fetches all patients from API
+ *   3. Initializes DataTable with patient data
+ *   4. Displays table with patient name, gender, age, contact number, and email
+ */
 function getAllPatients() {
   if ($.fn.DataTable.isDataTable("#dashboardTable")) {
     $("#dashboardTable").DataTable().destroy();

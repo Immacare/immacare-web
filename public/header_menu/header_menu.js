@@ -59,44 +59,65 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // Hide 'home' if not patient or doctor
       if (![patient].includes(data.role)) {
-        document.getElementById("home").style.display = "none";
+        const homeEl = document.getElementById("home");
+        if (homeEl) homeEl.style.display = "none";
       }
       if (data.role !== patient) {
-        document.getElementById("main-content-frame").src =
-          "../dashboard/dashboard.html";
+        const mainFrame = document.getElementById("main-content-frame");
+        if (mainFrame) {
+          mainFrame.src = "../dashboard/dashboard.html";
+        }
       }
       if (data.role !== patient) {
-        document.getElementById("myProfilePatient").style.display = "none";
+        const myProfilePatient = document.getElementById("myProfilePatient");
+        if (myProfilePatient) myProfilePatient.style.display = "none";
       }
       if (data.role !== doctor) {
-        document.getElementById("myProfileDoctor").style.display = "none";
+        const myProfileDoctor = document.getElementById("myProfileDoctor");
+        if (myProfileDoctor) myProfileDoctor.style.display = "none";
       }
       if (data.role !== admin) {
-        document.getElementById("userAccess").style.display = "none";
+        const userAccess = document.getElementById("userAccess");
+        if (userAccess) userAccess.style.display = "none";
       }
 
       // Dashboard: show only for doctor, admin, staff
       if (![doctor, admin, staff].includes(data.role)) {
-        document.getElementById("dashboard").style.display = "none";
+        const dashboard = document.getElementById("dashboard");
+        if (dashboard) dashboard.style.display = "none";
 
-        document.getElementById("inventory").style.display = "none";
+        const inventory = document.getElementById("inventory");
+        if (inventory) inventory.style.display = "none";
       }
 
       // Book Appointment: hide for doctor, admin, staff
       if ([doctor, admin, staff].includes(data.role)) {
-        document.getElementById("bookAppointment").style.display = "none";
+        const bookAppointment = document.getElementById("bookAppointment");
+        if (bookAppointment) bookAppointment.style.display = "none";
       }
 
       // Hide Doctors, Inventory, Financial if NOT admin or staff
       if (![admin, staff].includes(data.role)) {
-        document.getElementById("doctors").style.display = "none";
-        document.getElementById("finance").style.display = "none";
-        document.getElementById("patients").style.display = "none";
+        const doctors = document.getElementById("doctors");
+        if (doctors) doctors.style.display = "none";
+        const finance = document.getElementById("finance");
+        if (finance) finance.style.display = "none";
+        const patients = document.getElementById("patients");
+        if (patients) patients.style.display = "none";
+      }
+
+      // Hide Analytics if NOT admin only
+      if (data.role !== admin) {
+        const analytics = document.getElementById("analytics");
+        if (analytics) analytics.style.display = "none";
       }
     })
     .catch((error) => {
-      console.error("Error:", err.message);
-      document.getElementById("usernameDisplay").textContent = err.message;
+      console.error("Error:", error.message);
+      const usernameDisplay = document.getElementById("usernameDisplay");
+      if (usernameDisplay) {
+        usernameDisplay.textContent = error.message || "Error loading user data";
+      }
     });
 });
 

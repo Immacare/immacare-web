@@ -28,11 +28,12 @@
     "express-session": "^1.18.1",
     "jquery": "^3.7.1",
     "mongoose": "^8.19.4",
-    "mysql": "^2.18.1",
-    "mysql2": "^3.15.3",
-    "nodemailer": "^7.0.10",
+    "nodemailer": "^7.0.11",
     "open": "^10.2.0",
-    "twilio": "^5.10.4",
-    "web_immacare": "file:"
+    "resend": "^6.5.2",
+    "twilio": "^5.10.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

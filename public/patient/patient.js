@@ -1,3 +1,5 @@
+
+
 let patientTable;
 let patientHistory;
 let patientHistoryView;
@@ -55,13 +57,7 @@ $(document).ready(function () {
           href="../patient/patient_profile.html?patient_id=${row.user_id}"
           data-id="${row.id}"
         >
-          View Patient Profile
-         <a
-          class="btn btn-success btn-sm"
-          href="../patient/view_history.html?user_id=${row.user_id}"
-          data-id="${row.id}"
-        >
-          View History
+          View Patient Record
       `;
           },
         },
@@ -84,6 +80,7 @@ $(document).ready(function () {
         dataSrc: "data",
         data: function (d) {
           d.user_id = patientId ? patientId : userId;
+
         },
       },
       columns: [

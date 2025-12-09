@@ -1,0 +1,11 @@
+# FIX YOUR .env FILE - Current issue with RESEND_FROM_EMAIL
+
+
+
+RESEND_FROM_EMAIL=ImmaCare+ <noreply@immacare-clinic.it.com>
+RESEND_API_KEY=re_77Yc3f5D_EvwW5hRNdD4EW9dXUKgUtXJB
+RESEND_FROM_EMAIL=ImmaCare+ <noreply@immacare-clinic.it.com>
+
+# Frontend URL (for email links)
+FRONTEND_URL=http://localhost:3000
+
