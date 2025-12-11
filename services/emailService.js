@@ -2,25 +2,42 @@
  * Email Service Module
  * 
  * PURPOSE:
- * Handles all email sending functionality using Resend SMTP
+ * Handles all email sending functionality using Resend HTTP API
+ * (HTTP API is used instead of SMTP because Render blocks outbound SMTP ports)
  * 
  * USAGE:
  * Used for sending verification emails, password resets, and notifications
  */
 
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-// Initialize Nodemailer transporter with Resend SMTP
-const transporter = nodemailer.createTransport({
-  host: process.env.RESEND_SMTP_HOST || 'smtp.resend.com',
-  port: parseInt(process.env.RESEND_SMTP_PORT || '465'),
-  secure: true, // true for 465, false for other ports
-  auth: {
-    user: process.env.RESEND_SMTP_USER || 'resend',
-    pass: process.env.RESEND_API_KEY || process.env.RESEND_SMTP_PASSWORD
+/**
+ * Send email using Resend HTTP API
+ * @param {Object} mailOptions - Email options (from, to, subject, html)
+ * @returns {Promise<Object>} API response
+ */
+async function sendEmailViaResendAPI(mailOptions) {
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      html: mailOptions.html
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Resend API error: ${JSON.stringify(errorData)}`);
   }
-});
+
+  return await response.json();
+}
 
 /**
  * Send email verification email
@@ -81,10 +98,10 @@ async function sendVerificationEmail(email, name, verificationToken) {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Verification email sent:', info.messageId);
+    const result = await sendEmailViaResendAPI(mailOptions);
+    console.log('Verification email sent:', result.id);
     
-    return { success: true, messageId: info.messageId };
+    return { success: true, messageId: result.id };
   } catch (error) {
     console.error('Error sending verification email:', error);
     throw error;
@@ -150,10 +167,10 @@ async function sendPasswordResetEmail(email, name, resetToken) {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Password reset email sent:', info.messageId);
+    const result = await sendEmailViaResendAPI(mailOptions);
+    console.log('Password reset email sent:', result.id);
     
-    return { success: true, messageId: info.messageId };
+    return { success: true, messageId: result.id };
   } catch (error) {
     console.error('Error sending password reset email:', error);
     throw error;
