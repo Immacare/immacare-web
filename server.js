@@ -4831,7 +4831,19 @@ app.get("/getBookingListSearch", async (req, res) => {
  */
 app.post("/saveInventoryItem", async (req, res) => {
   try {
-    const { addItem, addCategory, addQuantity, addMinimum, addPrice } = req.body;
+    const { 
+      addItem, 
+      addCategory, 
+      addUnit,
+      addBeginningBalance,
+      addAdjustments,
+      addActualStock,
+      addQtyUsed,
+      addQtyWasted,
+      addMonthsUsage,
+      addABL,
+      addPrice 
+    } = req.body;
 
     // Validate required fields
     if (!addItem || !addCategory) {
@@ -4851,42 +4863,32 @@ app.post("/saveInventoryItem", async (req, res) => {
     let categoryObjectId;
     const mongoose = require('mongoose');
     
-    // Check if addCategory is already a valid ObjectId
+    // Map numeric values to category names (updated for new categories)
+    const categoryMap = {
+      '1': 'Medicines / Pharmaceuticals',
+      '2': 'Personal Protective Equipment (PPE)',
+      '3': 'Medical Instruments / Tools',
+      '4': 'Consumables / Disposables',
+      '5': 'Contraceptives'
+    };
+    
     if (mongoose.Types.ObjectId.isValid(addCategory)) {
-      // It's already an ObjectId, use it directly
       const categoryExists = await InventoryCategory.findById(addCategory);
       if (!categoryExists) {
         return res.status(400).json({ message: "Invalid category" });
       }
       categoryObjectId = addCategory;
     } else {
-      // It's a number or string, need to find the category
-      // Map numeric values to category names (from HTML)
-      const categoryMap = {
-        '1': 'Medicines / Pharmaceuticals',
-        '2': 'Personal Protective Equipment (PPE)',
-        '3': 'Medical Instruments / Tools',
-        '4': 'Surgical Supplies',
-        '5': 'Consumables / Disposables',
-        '6': 'Cleaning and Disinfection Supplies',
-        '7': 'Diagnostic Supplies',
-        '8': 'IV Supplies',
-        '9': 'Office and Stationery Supplies',
-        '10': 'Equipment and Devices',
-        '11': 'Vaccines',
-        '12': 'Reagents / Lab Supplies'
-      };
-      
       const categoryName = categoryMap[addCategory.toString()];
       if (categoryName) {
-        // Find category by name
-        const categoryDoc = await InventoryCategory.findOne({ category: categoryName });
+        let categoryDoc = await InventoryCategory.findOne({ category: categoryName });
         if (!categoryDoc) {
-          return res.status(400).json({ message: `Category "${categoryName}" not found in database` });
+          // Create the category if it doesn't exist
+          categoryDoc = new InventoryCategory({ category: categoryName });
+          await categoryDoc.save();
         }
         categoryObjectId = categoryDoc._id;
       } else {
-        // Try to find by the value directly (in case it's a category name)
         const categoryDoc = await InventoryCategory.findOne({ category: addCategory });
         if (categoryDoc) {
           categoryObjectId = categoryDoc._id;
@@ -4896,25 +4898,37 @@ app.post("/saveInventoryItem", async (req, res) => {
       }
     }
 
-    // Step 3: Calculate status
-    let status = 'in stock';
-    const quantity = parseInt(addQuantity) || 0;
-    const minimum = addMinimum ? parseInt(addMinimum) : null;
+    // Step 3: Calculate status based on ABL and ending balance
+    const actualStock = parseInt(addActualStock) || 0;
+    const qtyUsed = parseInt(addQtyUsed) || 0;
+    const qtyWasted = parseInt(addQtyWasted) || 0;
+    const abl = parseInt(addABL) || 0;
+    const endingBalance = actualStock - qtyUsed - qtyWasted;
     
-    if (quantity === 0) {
-      status = 'out of stock';
-    } else if (minimum && quantity < minimum) {
-      status = 'for reorder';
+    let status = 'In Stock';
+    if (endingBalance <= 0) {
+      status = 'Out of Stock';
+    } else if (abl > 0 && endingBalance < abl) {
+      status = 'For Reorder';
     }
 
-    // Step 4: Create new item
+    // Step 4: Create new item with all new fields
     const newItem = new Inventory({
       item: addItem,
       category: categoryObjectId,
-      quantity: quantity,
-      averageQuantity: minimum || null,
+      unit: addUnit || null,
+      beginning_balance: parseInt(addBeginningBalance) || 0,
+      adjustments: parseInt(addAdjustments) || 0,
+      actual_stock: actualStock,
+      qty_used: qtyUsed,
+      qty_wasted: qtyWasted,
+      months_usage: parseInt(addMonthsUsage) || 0,
+      abl: abl,
       price: addPrice ? parseFloat(addPrice) : null,
-      status: status
+      status: status,
+      // Legacy fields
+      quantity: actualStock,
+      averageQuantity: abl || null
     });
 
     await newItem.save();
@@ -4954,15 +4968,22 @@ app.get("/getInventory", async (req, res) => {
       });
     }
     
-    // Format results to match expected structure
+    // Format results to match expected structure with new fields
     const results = items.map(inv => ({
       id: inv._id.toString(),
       item: inv.item,
       category: inv.category ? inv.category.category : '',
-      quantity: inv.quantity,
-      average_quantity: inv.averageQuantity,
-      price: inv.price,
-      status: inv.status
+      category_id: inv.category ? inv.category._id.toString() : '',
+      unit: inv.unit || '',
+      beginning_balance: inv.beginning_balance || 0,
+      adjustments: inv.adjustments || 0,
+      actual_stock: inv.actual_stock || inv.quantity || 0,
+      qty_used: inv.qty_used || 0,
+      qty_wasted: inv.qty_wasted || 0,
+      months_usage: inv.months_usage || 0,
+      abl: inv.abl || inv.averageQuantity || 0,
+      price: inv.price || 0,
+      status: inv.status || 'In Stock'
     }));
 
     res.json({ data: results });
@@ -4989,10 +5010,16 @@ app.get("/getItemInventoryByID/:id", async (req, res) => {
       item: item.item,
       category: item.category ? item.category.category : '',
       category_id: item.category ? item.category._id.toString() : '',
-      quantity: item.quantity,
-      average_quantity: item.averageQuantity,
-      price: item.price,
-      status: item.status
+      unit: item.unit || '',
+      beginning_balance: item.beginning_balance || 0,
+      adjustments: item.adjustments || 0,
+      actual_stock: item.actual_stock || item.quantity || 0,
+      qty_used: item.qty_used || 0,
+      qty_wasted: item.qty_wasted || 0,
+      months_usage: item.months_usage || 0,
+      abl: item.abl || item.averageQuantity || 0,
+      price: item.price || 0,
+      status: item.status || 'In Stock'
     };
 
     res.json({ data: [result] });
@@ -5008,8 +5035,14 @@ app.post("/updateInventory", async (req, res) => {
       id,
       updateItemName,
       updateCategory,
-      updateQuantity,
-      updateMinimum,
+      updateUnit,
+      updateBeginningBalance,
+      updateAdjustments,
+      updateActualStock,
+      updateQtyUsed,
+      updateQtyWasted,
+      updateMonthsUsage,
+      updateABL,
       updatePrice,
     } = req.body;
 
@@ -5033,6 +5066,15 @@ app.post("/updateInventory", async (req, res) => {
     let categoryObjectId;
     const mongoose = require('mongoose');
     
+    // Updated category map for new categories
+    const categoryMap = {
+      '1': 'Medicines / Pharmaceuticals',
+      '2': 'Personal Protective Equipment (PPE)',
+      '3': 'Medical Instruments / Tools',
+      '4': 'Consumables / Disposables',
+      '5': 'Contraceptives'
+    };
+    
     if (mongoose.Types.ObjectId.isValid(updateCategory)) {
       const categoryExists = await InventoryCategory.findById(updateCategory);
       if (!categoryExists) {
@@ -5040,27 +5082,13 @@ app.post("/updateInventory", async (req, res) => {
       }
       categoryObjectId = updateCategory;
     } else {
-      // Map numeric values to category names
-      const categoryMap = {
-        '1': 'Medicines / Pharmaceuticals',
-        '2': 'Personal Protective Equipment (PPE)',
-        '3': 'Medical Instruments / Tools',
-        '4': 'Surgical Supplies',
-        '5': 'Consumables / Disposables',
-        '6': 'Cleaning and Disinfection Supplies',
-        '7': 'Diagnostic Supplies',
-        '8': 'IV Supplies',
-        '9': 'Office and Stationery Supplies',
-        '10': 'Equipment and Devices',
-        '11': 'Vaccines',
-        '12': 'Reagents / Lab Supplies'
-      };
-      
       const categoryName = categoryMap[updateCategory?.toString()];
       if (categoryName) {
-        const categoryDoc = await InventoryCategory.findOne({ category: categoryName });
+        let categoryDoc = await InventoryCategory.findOne({ category: categoryName });
         if (!categoryDoc) {
-          return res.status(400).json({ message: `Category "${categoryName}" not found` });
+          // Create the category if it doesn't exist
+          categoryDoc = new InventoryCategory({ category: categoryName });
+          await categoryDoc.save();
         }
         categoryObjectId = categoryDoc._id;
       } else {
@@ -5073,24 +5101,36 @@ app.post("/updateInventory", async (req, res) => {
       }
     }
 
-    // Calculate status
-    let status = 'in stock';
-    const quantity = parseInt(updateQuantity) || 0;
-    const minimum = updateMinimum ? parseInt(updateMinimum) : null;
+    // Calculate status based on ABL and ending balance
+    const actualStock = parseInt(updateActualStock) || 0;
+    const qtyUsed = parseInt(updateQtyUsed) || 0;
+    const qtyWasted = parseInt(updateQtyWasted) || 0;
+    const abl = parseInt(updateABL) || 0;
+    const endingBalance = actualStock - qtyUsed - qtyWasted;
     
-    if (quantity === 0) {
-      status = 'out of stock';
-    } else if (minimum && quantity < minimum) {
-      status = 'for reorder';
+    let status = 'In Stock';
+    if (endingBalance <= 0) {
+      status = 'Out of Stock';
+    } else if (abl > 0 && endingBalance < abl) {
+      status = 'For Reorder';
     }
 
-    // Update item
+    // Update item with all new fields
     item.item = updateItemName;
     item.category = categoryObjectId;
-    item.quantity = quantity;
-    item.averageQuantity = minimum || null;
+    item.unit = updateUnit || null;
+    item.beginning_balance = parseInt(updateBeginningBalance) || 0;
+    item.adjustments = parseInt(updateAdjustments) || 0;
+    item.actual_stock = actualStock;
+    item.qty_used = qtyUsed;
+    item.qty_wasted = qtyWasted;
+    item.months_usage = parseInt(updateMonthsUsage) || 0;
+    item.abl = abl;
     item.price = updatePrice ? parseFloat(updatePrice) : null;
     item.status = status;
+    // Legacy fields
+    item.quantity = actualStock;
+    item.averageQuantity = abl || null;
 
     await item.save();
 
@@ -5098,6 +5138,237 @@ app.post("/updateInventory", async (req, res) => {
   } catch (error) {
     console.error("Update inventory error:", error);
     return res.status(500).json({ message: "Inventory update failed", error: error.message });
+  }
+});
+
+// Update inventory status inline
+app.post("/updateInventoryStatus", async (req, res) => {
+  try {
+    const { id, status } = req.body;
+
+    if (!id || !status) {
+      return res.status(400).json({ message: "Item ID and status are required" });
+    }
+
+    const item = await Inventory.findById(id);
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    item.status = status;
+    await item.save();
+
+    res.json({ message: "Status updated successfully" });
+  } catch (error) {
+    console.error("Update status error:", error);
+    return res.status(500).json({ message: "Status update failed", error: error.message });
+  }
+});
+
+// Update inventory category inline
+app.post("/updateInventoryCategory", async (req, res) => {
+  try {
+    const { id, category } = req.body;
+
+    if (!id || !category) {
+      return res.status(400).json({ message: "Item ID and category are required" });
+    }
+
+    const item = await Inventory.findById(id);
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    // Updated category map
+    const categoryMap = {
+      '1': 'Medicines / Pharmaceuticals',
+      '2': 'Personal Protective Equipment (PPE)',
+      '3': 'Medical Instruments / Tools',
+      '4': 'Consumables / Disposables',
+      '5': 'Contraceptives'
+    };
+
+    const mongoose = require('mongoose');
+    let categoryObjectId;
+
+    if (mongoose.Types.ObjectId.isValid(category)) {
+      categoryObjectId = category;
+    } else {
+      const categoryName = categoryMap[category?.toString()];
+      if (categoryName) {
+        let categoryDoc = await InventoryCategory.findOne({ category: categoryName });
+        if (!categoryDoc) {
+          categoryDoc = new InventoryCategory({ category: categoryName });
+          await categoryDoc.save();
+        }
+        categoryObjectId = categoryDoc._id;
+      } else {
+        return res.status(400).json({ message: "Invalid category" });
+      }
+    }
+
+    item.category = categoryObjectId;
+    await item.save();
+
+    res.json({ message: "Category updated successfully" });
+  } catch (error) {
+    console.error("Update category error:", error);
+    return res.status(500).json({ message: "Category update failed", error: error.message });
+  }
+});
+
+// Delete inventory item
+app.delete("/deleteInventoryItem/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    const item = await Inventory.findByIdAndDelete(id);
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    res.json({ message: "Item deleted successfully" });
+  } catch (error) {
+    console.error("Delete inventory error:", error);
+    return res.status(500).json({ message: "Delete failed", error: error.message });
+  }
+});
+
+// Seed sample data for inventory items
+app.post("/seedInventoryData", async (req, res) => {
+  try {
+    const items = await Inventory.find({});
+    
+    // Sample data configurations based on item names
+    const sampleDataMap = {
+      'ointments': { beginning_balance: 200, adjustments: 0, actual_stock: 195, qty_used: 145, qty_wasted: 5, months_usage: 6, abl: 20, price: 200, unit: 'Tube' },
+      'injections': { beginning_balance: 200, adjustments: 0, actual_stock: 198, qty_used: 166, qty_wasted: 0, months_usage: 6, abl: 30, price: 500, unit: 'Vial' },
+      'gloves': { beginning_balance: 60, adjustments: 0, actual_stock: 48, qty_used: 50, qty_wasted: 0, months_usage: 3, abl: 10, price: 15, unit: 'Box' },
+      'mask': { beginning_balance: 100, adjustments: 0, actual_stock: 250, qty_used: 50, qty_wasted: 0, months_usage: 6, abl: 20, price: 15, unit: 'Box' },
+      'stethoscopes': { beginning_balance: 20, adjustments: 0, actual_stock: 120, qty_used: 20, qty_wasted: 0, months_usage: 12, abl: 5, price: 700, unit: 'Piece' },
+      'thermometers': { beginning_balance: 80, adjustments: 0, actual_stock: 75, qty_used: 75, qty_wasted: 0, months_usage: 6, abl: 10, price: 160, unit: 'Piece' },
+      'cotton balls': { beginning_balance: 100, adjustments: 0, actual_stock: 150, qty_used: 50, qty_wasted: 0, months_usage: 6, abl: 15, price: 45, unit: 'Pack' },
+      'solmux': { beginning_balance: 80, adjustments: 0, actual_stock: 100, qty_used: 79, qty_wasted: 0, months_usage: 6, abl: 10, price: 222, unit: 'Bottle' },
+      'solmux 2.0': { beginning_balance: 200, adjustments: 0, actual_stock: 480, qty_used: 120, qty_wasted: 5, months_usage: 6, abl: 100, price: 12, unit: 'Tablet' },
+      '23': { beginning_balance: 20, adjustments: 0, actual_stock: 25, qty_used: 8, qty_wasted: 1, months_usage: 6, abl: 5, price: 350, unit: 'Piece' },
+    };
+
+    // Default sample data for items not in the map
+    const defaultSamples = [
+      { beginning_balance: 150, adjustments: 0, actual_stock: 195, qty_used: 145, qty_wasted: 5, months_usage: 6, abl: 20, price: 200 },
+      { beginning_balance: 200, adjustments: 0, actual_stock: 198, qty_used: 166, qty_wasted: 0, months_usage: 6, abl: 30, price: 500 },
+      { beginning_balance: 60, adjustments: 0, actual_stock: 48, qty_used: 50, qty_wasted: 0, months_usage: 3, abl: 10, price: 15 },
+      { beginning_balance: 100, adjustments: 0, actual_stock: 250, qty_used: 50, qty_wasted: 0, months_usage: 6, abl: 20, price: 15 },
+      { beginning_balance: 20, adjustments: 0, actual_stock: 120, qty_used: 20, qty_wasted: 0, months_usage: 12, abl: 5, price: 700 },
+      { beginning_balance: 80, adjustments: 0, actual_stock: 75, qty_used: 75, qty_wasted: 0, months_usage: 6, abl: 10, price: 160 },
+    ];
+
+    let updatedCount = 0;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const itemNameLower = item.item ? item.item.toLowerCase() : '';
+      
+      // Check if we have specific sample data for this item
+      let sampleData = sampleDataMap[itemNameLower];
+      
+      if (!sampleData) {
+        // Use default sample data based on index
+        sampleData = defaultSamples[i % defaultSamples.length];
+      }
+
+      // Update the item with sample data
+      item.beginning_balance = sampleData.beginning_balance;
+      item.adjustments = sampleData.adjustments;
+      item.actual_stock = sampleData.actual_stock;
+      item.qty_used = sampleData.qty_used;
+      item.qty_wasted = sampleData.qty_wasted;
+      item.months_usage = sampleData.months_usage;
+      item.abl = sampleData.abl;
+      item.price = sampleData.price;
+      if (sampleData.unit) {
+        item.unit = sampleData.unit;
+      }
+
+      // Calculate status
+      const endingBalance = item.actual_stock - item.qty_used - item.qty_wasted;
+      if (endingBalance <= 0) {
+        item.status = 'Out of Stock';
+      } else if (item.abl > 0 && endingBalance < item.abl) {
+        item.status = 'For Reorder';
+      } else {
+        item.status = 'In Stock';
+      }
+
+      // Update legacy fields
+      item.quantity = item.actual_stock;
+      item.averageQuantity = item.abl;
+
+      await item.save();
+      updatedCount++;
+    }
+
+    res.json({ message: `Sample data added to ${updatedCount} inventory items` });
+  } catch (error) {
+    console.error("Seed inventory data error:", error);
+    return res.status(500).json({ message: "Failed to seed data", error: error.message });
+  }
+});
+
+// Update single inventory field inline
+app.post("/updateInventoryField", async (req, res) => {
+  try {
+    const { id, field, value } = req.body;
+
+    if (!id || !field) {
+      return res.status(400).json({ message: "Item ID and field are required" });
+    }
+
+    const item = await Inventory.findById(id);
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    // Allowed fields for inline editing
+    const allowedFields = ['unit', 'beginning_balance', 'adjustments', 'actual_stock', 'qty_used', 'qty_wasted', 'months_usage', 'abl', 'price'];
+    
+    if (!allowedFields.includes(field)) {
+      return res.status(400).json({ message: "Invalid field" });
+    }
+
+    // Update the field
+    if (field === 'unit') {
+      item[field] = value || null;
+    } else if (field === 'price') {
+      item[field] = value ? parseFloat(value) : null;
+    } else {
+      item[field] = parseInt(value) || 0;
+    }
+
+    // Recalculate status based on new values
+    const actualStock = parseFloat(item.actual_stock) || 0;
+    const qtyUsed = parseFloat(item.qty_used) || 0;
+    const qtyWasted = parseFloat(item.qty_wasted) || 0;
+    const abl = parseFloat(item.abl) || 0;
+    const endingBalance = actualStock - qtyUsed - qtyWasted;
+    
+    if (endingBalance <= 0) {
+      item.status = 'Out of Stock';
+    } else if (abl > 0 && endingBalance < abl) {
+      item.status = 'For Reorder';
+    } else {
+      item.status = 'In Stock';
+    }
+
+    // Update legacy fields
+    item.quantity = actualStock;
+    item.averageQuantity = abl || null;
+
+    await item.save();
+
+    res.json({ message: "Field updated successfully" });
+  } catch (error) {
+    console.error("Update field error:", error);
+    return res.status(500).json({ message: "Field update failed", error: error.message });
   }
 });
 

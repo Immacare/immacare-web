@@ -1,15 +1,179 @@
-body {
-  font-size: 13px; /* or smaller */
-}
+/* Clean Modern Inventory Table Styles */
 
-table, td, th, input, button, select {
-  font-size: inherit;
-}
-
-/* Truncates the text and adds ellipses for long item names */
-#inventoryTable .item-cell {
-    max-width: 150px; /* Adjust this width to your preferred size */
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* Table header styling */
+#inventoryTable thead th {
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
     white-space: nowrap;
+    padding: 12px 8px;
+    border: none;
+}
+
+/* Table cell styling */
+#inventoryTable tbody td {
+    vertical-align: middle;
+    text-align: center;
+    padding: 8px 6px;
+    font-size: 13px;
+    border-color: #e9ecef;
+}
+
+/* Alternating row colors */
+#inventoryTable tbody tr:nth-child(odd) {
+    background-color: #f8f9fa;
+}
+
+#inventoryTable tbody tr:nth-child(even) {
+    background-color: #fff;
+}
+
+#inventoryTable tbody tr:hover {
+    background-color: #e3f2fd;
+}
+
+/* Inline input styling */
+#inventoryTable .form-control-sm {
+    padding: 6px 4px;
+    font-size: 12px;
+    text-align: center;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background-color: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#inventoryTable .form-control-sm:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    outline: none;
+}
+
+/* Number inputs - hide spinners */
+#inventoryTable input[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+}
+
+#inventoryTable input[type="number"]::-webkit-outer-spin-button,
+#inventoryTable input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Disabled/readonly inputs */
+#inventoryTable input:disabled,
+#inventoryTable input[readonly] {
+    background-color: #f1f3f4;
+    border-color: #e0e0e0;
+    color: #5f6368;
+}
+
+/* Select dropdowns */
+#inventoryTable .form-select {
+    font-size: 11px;
+    padding: 6px 4px;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    background-color: #fff;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Category dropdown */
+.category-select {
+    width: 100%;
+}
+
+/* Status dropdown styling */
+.status-select {
+    font-weight: 500;
+    width: 100%;
+}
+
+.status-in-stock {
+    background-color: #d4edda !important;
+    border-color: #28a745 !important;
+    color: #155724 !important;
+}
+
+.status-out-of-stock {
+    background-color: #f8d7da !important;
+    border-color: #dc3545 !important;
+    color: #721c24 !important;
+}
+
+.status-for-reorder {
+    background-color: #fff3cd !important;
+    border-color: #ffc107 !important;
+    color: #856404 !important;
+}
+
+/* Stock and Ending Balance value styling */
+.stock-value,
+.ending-balance-value {
+    display: inline-block;
+    padding: 6px 12px;
+    min-width: 40px;
+    text-align: center;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* Color coding */
+.bg-success-light {
+    background-color: #d4edda !important;
+    color: #155724;
+}
+
+.bg-warning-light {
+    background-color: #fff3cd !important;
+    color: #856404;
+}
+
+.bg-danger-light {
+    background-color: #f8d7da !important;
+    color: #721c24;
+}
+
+/* Delete button styling */
+.delete-item-btn {
+    padding: 6px 10px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.delete-item-btn:hover {
+    transform: scale(1.05);
+}
+
+/* DataTables wrapper - enable horizontal scroll here */
+#inventoryTable_wrapper {
+    padding: 0;
+    overflow-x: auto;
+    width: 100%;
+}
+
+/* Table styling */
+#inventoryTable.dataTable {
+    border-collapse: collapse;
+    border-spacing: 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    min-width: 1800px;
+    width: 100%;
+}
+
+/* Responsive table container */
+.table-responsive {
+    border-radius: 8px;
+    overflow-x: auto;
+    width: 100%;
 }

@@ -33,14 +33,39 @@ const inventorySchema = new mongoose.Schema({
     ref: 'InventoryCategory',
     required: true
   },
-  quantity: {
+  unit: {
+    type: String,
+    trim: true,
+    maxlength: 50,
+    default: null
+  },
+  beginning_balance: {
     type: Number,
-    required: true,
     default: 0
   },
-  averageQuantity: {
+  adjustments: {
     type: Number,
-    default: null
+    default: 0
+  },
+  actual_stock: {
+    type: Number,
+    default: 0
+  },
+  qty_used: {
+    type: Number,
+    default: 0
+  },
+  qty_wasted: {
+    type: Number,
+    default: 0
+  },
+  months_usage: {
+    type: Number,
+    default: 0
+  },
+  abl: {
+    type: Number,
+    default: 0
   },
   price: {
     type: Number,
@@ -48,8 +73,17 @@ const inventorySchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    default: null,
-    enum: ['in stock', 'out of stock', 'for reorder', null]
+    default: 'In Stock',
+    enum: ['In Stock', 'Out of Stock', 'For Reorder', null]
+  },
+  // Legacy fields for backward compatibility
+  quantity: {
+    type: Number,
+    default: 0
+  },
+  averageQuantity: {
+    type: Number,
+    default: null
   }
 }, {
   timestamps: false // No timestamps for inventory
