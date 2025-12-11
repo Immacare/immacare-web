@@ -54,11 +54,7 @@ table, td, th, input, button, select {
   font-size: inherit;
 }
 
-#dashboardTable {
-    display: none; /* Recommended: Hides the element and removes it from the document flow */
-    /* OR */
-    /* visibility: hidden; /* Alternative: Hides the element but keeps its space */
-}
+/* Table is shown when data is loaded via JavaScript */
 
 
 

@@ -2914,8 +2914,8 @@ app.listen(PORT, '0.0.0.0', async () => {
 // Parse JSON request bodies
 app.use(bodyParser.json());
 
-// Enable CORS for all routes (configure more restrictively in production)
-app.use(cors());
+// CORS is already configured in Section 4 with credentials support
+// Do not add another cors() middleware here as it overrides the credentials setting
 
 // Serve static files from the public directory (main frontend files)
 app.use(express.static(path.join(__dirname, "public")));
@@ -4374,7 +4374,24 @@ app.post("/book-appointment", async (req, res) => {
       }
     }
 
-    // Step 3: Create appointment
+    // Step 3: Check for conflicting appointments (same doctor, date, and time)
+    if (doctorObjectId) {
+      const existingAppointment = await Appointment.findOne({
+        doctorId: doctorObjectId,
+        bookingDate: booking_date,
+        bookingTime: booking_time,
+        status: { $in: ['Booked', 'In Queue'] }
+      });
+
+      if (existingAppointment) {
+        return res.status(400).send({
+          message: "This time slot is already booked for the selected doctor. Please choose a different time.",
+          conflict: true
+        });
+      }
+    }
+
+    // Step 4: Create appointment
     const appointment = new Appointment({
       patientId: patientProfile._id,
       doctorId: doctorObjectId,
@@ -4495,6 +4512,69 @@ app.get("/item-inventory-count", async (req, res) => {
       message: "Count fetched successfully",
       inventory_count: count,
     });
+  } catch (error) {
+    console.error("Database error:", error);
+    return res.status(500).send({ message: "Database query failed" });
+  }
+});
+
+/**
+ * GET /appointment-count-completed-today
+ * Purpose: Get count of completed appointments for today
+ */
+app.get("/appointment-count-completed-today", async (req, res) => {
+  try {
+    const today = new Date();
+    const todayStr = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}-${today.getFullYear()}`;
+    
+    const count = await Appointment.countDocuments({ 
+      status: 'Completed',
+      bookingDate: todayStr
+    });
+    
+    res.send({ count });
+  } catch (error) {
+    console.error("Database error:", error);
+    return res.status(500).send({ message: "Database query failed" });
+  }
+});
+
+/**
+ * GET /appointment-count-in-queue
+ * Purpose: Get count of appointments currently in queue
+ */
+app.get("/appointment-count-in-queue", async (req, res) => {
+  try {
+    const count = await Appointment.countDocuments({ status: 'In Queue' });
+    res.send({ count });
+  } catch (error) {
+    console.error("Database error:", error);
+    return res.status(500).send({ message: "Database query failed" });
+  }
+});
+
+/**
+ * GET /appointment-count-cancelled
+ * Purpose: Get count of cancelled appointments
+ */
+app.get("/appointment-count-cancelled", async (req, res) => {
+  try {
+    const count = await Appointment.countDocuments({ status: 'Cancelled' });
+    res.send({ count });
+  } catch (error) {
+    console.error("Database error:", error);
+    return res.status(500).send({ message: "Database query failed" });
+  }
+});
+
+/**
+ * GET /doctor-count
+ * Purpose: Get total count of doctors in the system
+ */
+app.get("/doctor-count", async (req, res) => {
+  try {
+    const count = await User.countDocuments({ role: 'doctor' });
+    res.send({ count });
   } catch (error) {
     console.error("Database error:", error);
     return res.status(500).send({ message: "Database query failed" });
@@ -5343,22 +5423,41 @@ app.post("/cancelBooking", async (req, res) => {
 
 app.get("/validateAppointment", async (req, res) => {
   try {
-    const { booking_date, booking_time, user_id, consultation_type } = req.query;
+    const { booking_date, booking_time, user_id, consultation_type, doctor_id } = req.query;
 
     if (!booking_date || !booking_time || !user_id || !consultation_type) {
       return res.status(400).json({ message: "Missing required parameters" });
     }
 
-    // Find patient profile by user_id
+    // Check 1: Validate doctor's time slot availability (prevent double-booking same doctor/date/time)
+    if (doctor_id && doctor_id !== '0' && doctor_id !== '') {
+      const doctorConflict = await Appointment.findOne({
+        doctorId: doctor_id,
+        bookingDate: booking_date,
+        bookingTime: booking_time,
+        status: { $in: ['Booked', 'In Queue'] }
+      });
+
+      if (doctorConflict) {
+        return res.json({
+          exists: true,
+          message: "This time slot is already booked for the selected doctor. Please choose a different time.",
+          conflictType: "doctor_slot"
+        });
+      }
+    }
+
+    // Check 2: Find patient profile by user_id
     const patientProfile = await PatientProfile.findOne({ userId: user_id });
     if (!patientProfile) {
       return res.json({ exists: false });
     }
 
-    // Find appointments for this patient on the same date
+    // Check 3: Find appointments for this patient on the same date
     const appointments = await Appointment.find({
       patientId: patientProfile._id,
-      bookingDate: booking_date
+      bookingDate: booking_date,
+      status: { $in: ['Booked', 'In Queue'] }
     }).lean();
 
     const normalizedType = consultation_type.trim().toLowerCase();
@@ -5888,15 +5987,32 @@ app.get("/getAllPatients", async (req, res) => {
       .populate('userId', 'email')
       .lean();
 
-    const results = patients.map(patient => ({
-      id: patient._id.toString(),
-      fullname: `${patient.firstname} ${patient.lastname}`,
-      gender: patient.gender,
-      age: patient.age,
-      mobile_number: patient.mobileNumber,
-      email_address: patient.emailAddress || (patient.userId && patient.userId.email) || '',
-      user_id: patient.userId ? patient.userId._id.toString() : patient.userId.toString()
-    }));
+    const results = patients.map(patient => {
+      let userId = '';
+      if (patient.userId) {
+        if (typeof patient.userId === 'object' && patient.userId._id) {
+          userId = patient.userId._id.toString();
+        } else if (typeof patient.userId === 'string') {
+          userId = patient.userId;
+        } else {
+          try {
+            userId = String(patient.userId);
+          } catch (e) {
+            userId = '';
+          }
+        }
+      }
+      
+      return {
+        id: patient._id ? patient._id.toString() : '',
+        fullname: `${patient.firstname || ''} ${patient.lastname || ''}`.trim(),
+        gender: patient.gender || '',
+        age: patient.age || '',
+        mobile_number: patient.mobileNumber || '',
+        email_address: patient.emailAddress || (patient.userId && patient.userId.email) || '',
+        user_id: userId
+      };
+    });
 
     res.json(results);
   } catch (error) {

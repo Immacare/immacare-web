@@ -151,7 +151,35 @@ $(document).ready(function () {
   $.get("/item-inventory-count", function (data) {
     $("#inventoryCount").text(data.inventory_count);
   }).fail(function (xhr) {
-    alert(xhr.responseJSON.message);
+    console.error("Error loading inventory count");
+  });
+
+  // Load completed today count
+  $.get("/appointment-count-completed-today", function (data) {
+    $("#completedTodayCount").text(data.count || 0);
+  }).fail(function (xhr) {
+    console.error("Error loading completed today count");
+  });
+
+  // Load in-queue count
+  $.get("/appointment-count-in-queue", function (data) {
+    $("#inQueueCount").text(data.count || 0);
+  }).fail(function (xhr) {
+    console.error("Error loading in-queue count");
+  });
+
+  // Load cancelled count
+  $.get("/appointment-count-cancelled", function (data) {
+    $("#cancelledCount").text(data.count || 0);
+  }).fail(function (xhr) {
+    console.error("Error loading cancelled count");
+  });
+
+  // Load doctor count
+  $.get("/doctor-count", function (data) {
+    $("#doctorCount").text(data.count || 0);
+  }).fail(function (xhr) {
+    console.error("Error loading doctor count");
   });
 });
 
@@ -346,4 +374,28 @@ function getAllPatients() {
       alert("Error loading patient data. Please try again.");
     },
   });
+}
+
+/**
+ * Print the current dashboard table
+ */
+function printDashboardTable() {
+  const table = $.fn.DataTable.isDataTable("#dashboardTable") 
+    ? $("#dashboardTable").DataTable() 
+    : null;
+    
+  if (table && table.data().count() > 0) {
+    const columns = table.columns().header().toArray();
+    const headers = columns.map(col => $(col).text());
+    const dataKeys = table.settings().init().columns.map(col => col.data);
+    
+    printDataTable(
+      table,
+      'Dashboard Report',
+      dataKeys,
+      headers
+    );
+  } else {
+    alert('No data to print. Please select a view first (e.g., "More Info" on a card).');
+  }
 }

@@ -614,7 +614,7 @@ function checkSpecialty(specialtyId) {
 }
 
 function getSession() {
-  fetch("http://localhost:3000/homepage", {
+  fetch("/homepage", {
     method: "GET",
     credentials: "include",
   })

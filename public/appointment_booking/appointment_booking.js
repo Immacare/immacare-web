@@ -179,7 +179,7 @@ function renderCalendar(date) {
 }
 let role;
 $(document).ready(function () {
-  fetch("http://localhost:3000/homepage", {
+  fetch("/homepage", {
     method: "GET",
     credentials: "include",
   })
@@ -504,6 +504,7 @@ document.addEventListener("DOMContentLoaded", function () {
           booking_date: $("#selectedDate").val(),
           booking_time: $("#selectedTime").val(),
           user_id: $("#user_id_booking").val(),
+          doctor_id: doctors_id,
         },
         success: function (response) {
           console.log(response);
@@ -1563,4 +1564,20 @@ function patientDetails(patient_user_id) {
       alert("Error fetching patientDetails.");
     },
   });
+}
+
+/**
+ * Print the booking list table
+ */
+function printBookingList() {
+  if (typeof bookingTable !== 'undefined' && bookingTable) {
+    printDataTable(
+      bookingTable,
+      'Appointment List',
+      ['fullname', 'consultation_type', 'booking_date', 'queue_no', 'status'],
+      ['Patient Name', 'Consultation Type', 'Booking Date', 'Queue No.', 'Status']
+    );
+  } else {
+    alert('No data to print. Please load the table first.');
+  }
 }

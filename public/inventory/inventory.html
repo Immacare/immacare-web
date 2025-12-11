@@ -42,6 +42,7 @@
     <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script> -->
+    <script src="/js/print-utils.js"></script>
     <script src="inventory.js"></script>
     <link
       rel="stylesheet"
@@ -102,20 +103,28 @@
               </div>
             </div>
 
-            <div class="col-md-2 d-flex align-items-center">
+            <div class="col-md-2 d-flex align-items-center gap-1">
               <button
                 type="button"
-                class="btn btn-info btn-md w-50  me-2"
+                class="btn btn-info btn-sm"
                 onclick="clearCriteria()"
               >
                 Clear
               </button>
               <button
                 type="button"
-                class="btn btn-success btn-md w-50"
+                class="btn btn-success btn-sm"
                 onclick="searchInventory()"
               >
                 Search
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                onclick="printInventory()"
+                title="Print Inventory"
+              >
+                <i class="bi bi-printer"></i>
               </button>
             </div>
           </div>

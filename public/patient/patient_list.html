@@ -17,6 +17,7 @@
     />
     <script src="/datatables.net/js/dataTables.js"></script>
     <script src="/datatables.net/js/dataTables.min.js"></script>
+    <script src="/js/print-utils.js"></script>
     <script src="patient.js"></script>
     <link rel="stylesheet " href="patient.css" />
   </head>
@@ -66,11 +67,11 @@
               />
             </div>
           </div>
-          <div class="col-md-2 d-flex align-items-center">
+          <div class="col-md-2 d-flex align-items-center gap-1">
             <button
               type="button"
               id="clearList"
-              class="btn btn-info btn-sm w-30 me-2"
+              class="btn btn-info btn-sm"
               onclick="clearCriteria()"
             >
               Clear
@@ -78,10 +79,18 @@
             <button
               type="button"
               id="searchList"
-              class="btn btn-success btn-sm w-30"
+              class="btn btn-success btn-sm"
               onclick="searchPatients()"
             >
               Search
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-sm"
+              onclick="printPatientList()"
+              title="Print Patient List"
+            >
+              <i class="bi bi-printer"></i>
             </button>
           </div>
         </div>

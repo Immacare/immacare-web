@@ -107,7 +107,7 @@ $(document).ready(function () {
 });
 
 function getSession() {
-  fetch("http://localhost:3000/homepage", {
+  fetch("/homepage", {
     method: "GET",
     credentials: "include",
   })
@@ -562,4 +562,20 @@ function updatePatientInfo(user_id) {
       });
     }
   });
+}
+
+/**
+ * Print the patient list table
+ */
+function printPatientList() {
+  if (typeof patientTable !== 'undefined' && patientTable) {
+    printDataTable(
+      patientTable,
+      'Patient List',
+      ['fullname', 'gender', 'age', 'mobile_number', 'email_address'],
+      ['Patient Name', 'Gender', 'Age', 'Contact Number', 'Email Address']
+    );
+  } else {
+    alert('No data to print. Please load the table first.');
+  }
 }

@@ -32,7 +32,7 @@ function loadPage(url) {
   document.getElementById("main-content-frame").src = url;
 }
 document.addEventListener("DOMContentLoaded", function () {
-  fetch("http://localhost:3000/homepage", {
+  fetch("/homepage", {
     method: "GET",
     credentials: "include",
   })

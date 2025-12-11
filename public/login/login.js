@@ -99,7 +99,7 @@ form.addEventListener("submit", async (e) => {
     });
 
   try {
-    const response = await fetch("http://localhost:3000/login", {
+    const response = await fetch("/login", {
       // Make sure port matches your backend
       method: "POST",
       headers: { "Content-Type": "application/json" },

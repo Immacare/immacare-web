@@ -222,6 +222,22 @@ function discardChanges() {
   $("#updateItem").modal("hide");
 }
 
+/**
+ * Print the inventory table
+ */
+function printInventory() {
+  if (typeof table !== 'undefined' && table) {
+    printDataTable(
+      table,
+      'Inventory Report',
+      ['item', 'category', 'quantity', 'price', 'status'],
+      ['Item', 'Category', 'Quantity', 'Price', 'Status']
+    );
+  } else {
+    alert('No data to print. Please load the table first.');
+  }
+}
+
 // inventory.js (inside $(document).ready function)
 
 // let table;

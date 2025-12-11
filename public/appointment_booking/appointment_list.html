@@ -18,6 +18,7 @@
     <script src="/datatables.net/js/dataTables.js"></script>
     <script src="/datatables.net/js/dataTables.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/js/print-utils.js"></script>
     <script src="appointment_booking.js"></script>
 
     <link rel="stylesheet" href="appointment_booking.css" />
@@ -122,13 +123,21 @@
             </div>
           </div>
 
-          <div class="col-md-2 d-flex align-items-center">
+          <div class="col-md-2 d-flex align-items-center gap-2">
             <button
               type="button"
-              class="btn btn-success btn-md w-50"
+              class="btn btn-success btn-md"
               onclick="searchBooking()"
             >
               Search
+            </button>
+            <button
+              type="button"
+              class="btn btn-secondary btn-md"
+              onclick="printBookingList()"
+              title="Print Appointment List"
+            >
+              <i class="bi bi-printer"></i> Print
             </button>
           </div>
         </div>

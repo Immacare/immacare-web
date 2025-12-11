@@ -13,6 +13,7 @@
     <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="/jquery/jquery.min.js"></script>
     
+    <script src="/js/print-utils.js"></script>
     <script src="dashboard.js"></script>
     <link
       rel="stylesheet"
@@ -87,14 +88,78 @@
         </div>
       </div>
     </div>
+    
+    <!-- Second Row of Dashboard Cards -->
+    <div class="row g-2 mt-2">
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-header" style="background-color: #28a745; color: white;">Completed Today</div>
+          <div
+            class="card-body d-flex justify-content-between align-items-center"
+            style="background-color: #d4edda;"
+          >
+            <span id="completedTodayCount">0</span>
+            <i class="bi bi-check-circle opacity-50"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-header" style="background-color: #ffc107; color: #333;">In Queue</div>
+          <div
+            class="card-body d-flex justify-content-between align-items-center"
+            style="background-color: #fff3cd;"
+          >
+            <span id="inQueueCount">0</span>
+            <i class="bi bi-hourglass-split opacity-50"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-header" style="background-color: #dc3545; color: white;">Cancelled</div>
+          <div
+            class="card-body d-flex justify-content-between align-items-center"
+            style="background-color: #f8d7da;"
+          >
+            <span id="cancelledCount">0</span>
+            <i class="bi bi-x-circle opacity-50"></i>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-header" style="background-color: #6f42c1; color: white;">Total Doctors</div>
+          <div
+            class="card-body d-flex justify-content-between align-items-center"
+            style="background-color: #e2d9f3;"
+          >
+            <span id="doctorCount">0</span>
+            <i class="bi bi-person-badge opacity-50"></i>
+          </div>
+        </div>
+      </div>
+    </div>
     <hr />
 
-    <!-- <canvas id="myChart" width="200" height="100"></canvas> -->
+    <!-- Print Button for Dashboard Table -->
+    <div class="d-flex justify-content-end mb-2">
+      <button
+        type="button"
+        class="btn btn-secondary btn-sm"
+        onclick="printDashboardTable()"
+        title="Print Current View"
+      >
+        <i class="bi bi-printer"></i> Print
+      </button>
+    </div>
 
     <table
       id="dashboardTable"
       class="table table-light table-striped table-bordered table-hover"
     >
+      <thead></thead>
+      <tbody></tbody>
     </table> 
   </body>
 </html>
