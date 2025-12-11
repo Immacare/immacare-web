@@ -4935,7 +4935,8 @@ app.get("/getInventory", async (req, res) => {
     const query = {};
     
     if (status) {
-      query.status = status;
+      // Case-insensitive status matching
+      query.status = { $regex: new RegExp(`^${status}$`, 'i') };
     }
     
     // Get inventory items with populated category
@@ -5011,6 +5012,17 @@ app.post("/updateInventory", async (req, res) => {
       updateMinimum,
       updatePrice,
     } = req.body;
+
+    // Validate required fields
+    if (!id) {
+      return res.status(400).json({ message: "Item ID is required" });
+    }
+    if (!updateItemName) {
+      return res.status(400).json({ message: "Item name is required" });
+    }
+    if (!updateCategory) {
+      return res.status(400).json({ message: "Category is required" });
+    }
 
     const item = await Inventory.findById(id);
     if (!item) {
