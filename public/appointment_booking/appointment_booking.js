@@ -210,17 +210,18 @@ $(document).ready(function () {
       $("#user_id").val(`${data.user_id}`).prop("readonly", true);
       $("#user_id_list").val(`${data.user_id_id}`).prop("readonly", true);
       $("#user_id_booking").val(`${data.user_id}`).prop("readonly", true);
-      $("#firstname").val(`${data.firstname}`).prop("readonly", true);
-      $("#middlename").val(`${data.middlename}`).prop("readonly", true);
-      $("#lastname").val(`${data.lastname}`).prop("readonly", true);
-      $("#gender").val(`${data.gender}`).prop("readonly", true);
-      $("#age").val(`${data.age}`).prop("readonly", true);
+      // Allow users to edit their personal details
+      $("#firstname").val(`${data.firstname}`);
+      $("#middlename").val(`${data.middlename}`);
+      $("#lastname").val(`${data.lastname}`);
+      $("#gender").val(`${data.gender}`);
+      $("#age").val(`${data.age}`);
       $("#role").val(`${data.role}`).prop("readonly", true);
       $("#role_list").val(`${data.role}`).prop("readonly", true);
-      $("#mobileNum2").val(`${data.phone}`).prop("readonly", true);
-      $("#email").val(`${data.email}`).prop("readonly", true);
+      $("#mobileNum2").val(`${data.phone}`);
+      $("#email").val(`${data.email}`).prop("readonly", true); // Email should stay readonly
       if (`${data.role}` == "patient") {
-        $("#patientName").prop("readonly", true);
+        $("#patientName").prop("readonly", false);
       }
       patientDetails(`${data.user_id_id}`);
 
