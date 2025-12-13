@@ -263,11 +263,15 @@
               >
               <div class="col-sm-8">
                 <input
-                  type="number"
+                  type="tel"
                   class="form-control"
                   id="contactNumber"
                   name="contactNumber"
                   tabindex="5"
+                  maxlength="12"
+                  pattern="[0-9]*"
+                  inputmode="numeric"
+                  oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 12)"
                 />
               </div>
             </div>

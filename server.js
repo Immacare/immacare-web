@@ -4161,10 +4161,10 @@ app.get("/users", async (req, res) => {
   try {
     const { role, fullname } = req.query;
 
-    // Build MongoDB query
-    const query = { role: { $ne: 'admin' } };
+    // Build MongoDB query - exclude admin and patient roles
+    const query = { role: { $nin: ['admin', 'patient'] } };
 
-    if (role) {
+    if (role && role !== 'patient') {
       query.role = role;
     }
 
@@ -4193,6 +4193,45 @@ app.get("/users", async (req, res) => {
     res.json({ data: results });
   } catch (error) {
     console.error("Get users error:", error);
+    return res.status(500).json({ message: "Database error" });
+  }
+});
+
+/**
+ * GET /patients
+ * Purpose: Get all patients for the Patient List page
+ */
+app.get("/patients", async (req, res) => {
+  try {
+    const { fullname } = req.query;
+
+    // Build MongoDB query - only patients
+    const query = { role: 'patient' };
+
+    if (fullname) {
+      query.$or = [
+        { firstname: { $regex: fullname, $options: 'i' } },
+        { lastname: { $regex: fullname, $options: 'i' } }
+      ];
+    }
+
+    const users = await User.find(query)
+      .select('_id firstname middlename lastname role email status updatedAt')
+      .lean();
+
+    // Format results to match expected format
+    const results = users.map(user => ({
+      user_id: user._id.toString(),
+      role: user.role,
+      fullname: `${user.firstname} ${user.lastname}`,
+      status: user.status ? 'Active' : 'Inactive',
+      username: user.email,
+      updated_date: user.updatedAt ? new Date(user.updatedAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : null
+    }));
+
+    res.json({ data: results });
+  } catch (error) {
+    console.error("Get patients error:", error);
     return res.status(500).json({ message: "Database error" });
   }
 });
@@ -5914,11 +5953,6 @@ app.get("/getConsultationDetails", async (req, res) => {
       status: { $in: ['Emergency', 'Completed'] }
     })
       .populate('doctorId', 'firstname lastname')
-      .populate({
-        path: 'appointmentId',
-        model: 'DoctorRecommendation',
-        select: 'recommendation followUpRequired'
-      })
       .sort({ bookingDate: -1 })
       .lean();
 

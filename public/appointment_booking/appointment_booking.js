@@ -328,7 +328,7 @@ function initBookingTable() {
           visible: false,
         },
       ],
-
+      order: [], // Preserve server-side order (latest first)
       searching: false,
       responsive: true,
       ajax: {
@@ -858,6 +858,22 @@ function validateStep2() {
     const isEmailValid =
       id === "email" ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) : true;
 
+    // Mobile number validation: 11 digits max, or 12 if starts with 63
+    if (id === "mobileNum2") {
+      const mobileValue = value.replace(/\D/g, "");
+      const startsWithCountryCode = mobileValue.startsWith("63");
+      const maxLength = startsWithCountryCode ? 12 : 11;
+      
+      if (!mobileValue || mobileValue.length < 10 || mobileValue.length > maxLength) {
+        field.classList.add("is-invalid");
+        if (!firstInvalidField) firstInvalidField = field;
+        isValid = false;
+        return;
+      }
+      field.classList.remove("is-invalid");
+      return;
+    }
+
     const isEmpty = !value || !isEmailValid;
 
     if (isEmpty) {
@@ -957,13 +973,7 @@ function validateStep3() {
 
     // --- 3️⃣ Mobile number validation ---
     else if (id === "mobileNum3") {
-      let mobileValue = value;
-
-      // Auto-add "639" if missing
-      if (!mobileValue.startsWith("639") && mobileValue.length > 0) {
-        mobileValue = "639" + mobileValue.replace(/^0+/, "");
-        field.value = mobileValue;
-      }
+      let mobileValue = value.replace(/\D/g, ""); // Remove non-digits
 
       // Empty field
       if (!mobileValue) {
@@ -976,22 +986,26 @@ function validateStep3() {
         return;
       }
 
-      // Must start with 639
-      if (!mobileValue.startsWith("639")) {
+      // Validate length: 11 digits normally, or 12 if starts with 63
+      const startsWithCountryCode = mobileValue.startsWith("63");
+      const maxLength = startsWithCountryCode ? 12 : 11;
+      
+      if (mobileValue.length > maxLength) {
         Swal.fire({
           icon: "error",
-          text: "Mobile number must start with 639.",
+          text: startsWithCountryCode 
+            ? "Mobile number must be 12 digits when starting with 63." 
+            : "Mobile number must be 11 digits max.",
         });
         if (!firstInvalidField) firstInvalidField = field;
         isValid = false;
         return;
       }
 
-      // Must be exactly 12 digits
-      if (mobileValue.length !== 12) {
+      if (mobileValue.length < 10) {
         Swal.fire({
           icon: "error",
-          text: "Mobile number must be 12 digits (including 639).",
+          text: "Mobile number must be at least 10 digits.",
         });
         if (!firstInvalidField) firstInvalidField = field;
         isValid = false;
@@ -1027,37 +1041,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
   //  Mobile number logic
   if (mobileField) {
-    // Always start with 639
-    if (!mobileField.value.startsWith("639")) {
-      mobileField.value = "639";
-    }
-
     // Auto-format on input
     mobileField.addEventListener("input", (e) => {
-      let val = e.target.value;
+      let val = e.target.value.replace(/\D/g, ""); // Remove non-digits
 
-      // Always keep 639 prefix
-      if (!val.startsWith("639")) {
-        val = "639";
-      }
-
-      // Limit to 12 digits
-      if (val.length > 12) {
-        val = val.slice(0, 12);
+      // Limit based on whether it starts with 63 (country code)
+      const maxLength = val.startsWith("63") ? 12 : 11;
+      if (val.length > maxLength) {
+        val = val.slice(0, maxLength);
       }
 
       e.target.value = val;
     });
 
-    // Allow backspace but protect 639
+    // Allow only digits
     mobileField.addEventListener("keydown", (e) => {
-      const start = mobileField.selectionStart;
-
-      // Prevent deleting "639"
-      if (
-        (e.key === "Backspace" && start <= 3) ||
-        (e.key === "Delete" && start < 3)
-      ) {
+      // Allow: backspace, delete, tab, escape, enter, arrows
+      if ([8, 9, 27, 13, 46, 37, 38, 39, 40].includes(e.keyCode) ||
+          // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+          (e.keyCode >= 65 && e.keyCode <= 90 && (e.ctrlKey || e.metaKey))) {
+        return;
+      }
+      // Block non-numeric keys
+      if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
         e.preventDefault();
       }
     });

@@ -181,7 +181,255 @@ $(document).ready(function () {
   }).fail(function (xhr) {
     console.error("Error loading doctor count");
   });
+
+  // Check if user is admin and load predictive analytics
+  checkAdminAndLoadAnalytics();
 });
+
+// ============================================================================
+// DASHBOARD ANALYTICS CHARTS
+// ============================================================================
+
+let dashboardAppointmentChart = null;
+let dashboardInventoryChart = null;
+let dashboardHealthChart = null;
+
+/**
+ * Check if user is admin and load analytics if so
+ */
+function checkAdminAndLoadAnalytics() {
+  $.get("/homepage", function(data) {
+    if (data.role === 'admin') {
+      // Show the predictive analytics section
+      const analyticsSection = document.getElementById('predictiveAnalyticsSection');
+      if (analyticsSection) {
+        analyticsSection.style.display = 'flex';
+      }
+      // Load the charts
+      loadDashboardAnalytics();
+    }
+  }).fail(function() {
+    console.error("Error checking user role for analytics");
+  });
+}
+
+/**
+ * Load all dashboard analytics charts
+ */
+function loadDashboardAnalytics() {
+  loadDashboardAppointmentChart();
+  loadDashboardInventoryChart();
+  loadDashboardHealthChart();
+}
+
+/**
+ * Load appointment forecast chart for dashboard
+ */
+function loadDashboardAppointmentChart() {
+  const ctx = document.getElementById('dashboardAppointmentChart');
+  if (!ctx) return;
+
+  $.get("/analytics/appointment-forecast", function(data) {
+    if (data.success) {
+      renderDashboardAppointmentChart(ctx, data.data);
+    }
+  }).fail(function() {
+    // Show placeholder if data unavailable
+    renderPlaceholderChart(ctx, 'Appointment Data');
+  });
+}
+
+function renderDashboardAppointmentChart(ctx, data) {
+  if (dashboardAppointmentChart) {
+    dashboardAppointmentChart.destroy();
+  }
+
+  const labels = data.historical.map(d => d.date);
+  const historicalData = data.historical.map(d => d.count);
+  const forecastData = data.forecast.map(d => d.predicted);
+  const forecastLabels = data.forecast.map(d => d.date);
+
+  dashboardAppointmentChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [...labels, ...forecastLabels],
+      datasets: [
+        {
+          label: 'Historical',
+          data: [...historicalData, ...new Array(forecastLabels.length).fill(null)],
+          borderColor: 'rgb(75, 192, 192)',
+          backgroundColor: 'rgba(75, 192, 192, 0.2)',
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 2
+        },
+        {
+          label: 'Predicted',
+          data: [...new Array(labels.length).fill(null), ...forecastData],
+          borderColor: 'rgb(255, 99, 132)',
+          backgroundColor: 'rgba(255, 99, 132, 0.2)',
+          borderDash: [5, 5],
+          tension: 0.4,
+          borderWidth: 2,
+          pointRadius: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { display: false },
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+}
+
+/**
+ * Load inventory status chart for dashboard
+ */
+function loadDashboardInventoryChart() {
+  const ctx = document.getElementById('dashboardInventoryChart');
+  if (!ctx) return;
+
+  $.get("/analytics/inventory-forecast", function(data) {
+    if (data.success) {
+      renderDashboardInventoryChart(ctx, data.data);
+    }
+  }).fail(function() {
+    renderPlaceholderChart(ctx, 'Inventory Data');
+  });
+}
+
+function renderDashboardInventoryChart(ctx, data) {
+  if (dashboardInventoryChart) {
+    dashboardInventoryChart.destroy();
+  }
+
+  // Use reorderPredictions from API
+  const items = data.reorderPredictions || [];
+  const itemNames = items.slice(0, 8).map(d => d.item);
+  const currentStock = items.slice(0, 8).map(d => d.currentQuantity);
+  const reorderThreshold = items.slice(0, 8).map(d => d.reorderThreshold);
+
+  dashboardInventoryChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: itemNames,
+      datasets: [
+        {
+          label: 'Current Stock',
+          data: currentStock,
+          backgroundColor: 'rgba(54, 162, 235, 0.6)',
+          borderColor: 'rgb(54, 162, 235)',
+          borderWidth: 1
+        },
+        {
+          label: 'Reorder Threshold',
+          data: reorderThreshold,
+          backgroundColor: 'rgba(255, 99, 132, 0.6)',
+          borderColor: 'rgb(255, 99, 132)',
+          borderWidth: 1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { boxWidth: 12, font: { size: 10 } } }
+      },
+      scales: {
+        x: { ticks: { font: { size: 9 }, maxRotation: 45 } },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+/**
+ * Load health/patient trends chart for dashboard
+ */
+function loadDashboardHealthChart() {
+  const ctx = document.getElementById('dashboardHealthChart');
+  if (!ctx) return;
+
+  $.get("/analytics/health-risk-analysis", function(data) {
+    if (data.success) {
+      renderDashboardHealthChart(ctx, data.data);
+    }
+  }).fail(function() {
+    renderPlaceholderChart(ctx, 'Patient Data');
+  });
+}
+
+function renderDashboardHealthChart(ctx, data) {
+  if (dashboardHealthChart) {
+    dashboardHealthChart.destroy();
+  }
+
+  // Use riskDistribution from API
+  const riskDistribution = data.riskDistribution || { high: 0, medium: 0, low: 0 };
+
+  dashboardHealthChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['High Risk', 'Medium Risk', 'Low Risk'],
+      datasets: [{
+        label: 'Patient Risk Distribution',
+        data: [riskDistribution.high, riskDistribution.medium, riskDistribution.low],
+        backgroundColor: [
+          'rgba(220, 53, 69, 0.8)',
+          'rgba(255, 193, 7, 0.8)',
+          'rgba(40, 167, 69, 0.8)'
+        ],
+        borderColor: [
+          'rgb(220, 53, 69)',
+          'rgb(255, 193, 7)',
+          'rgb(40, 167, 69)'
+        ],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+/**
+ * Render placeholder chart when data is unavailable
+ */
+function renderPlaceholderChart(ctx, label) {
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['No Data'],
+      datasets: [{
+        label: label,
+        data: [0],
+        backgroundColor: '#e9ecef'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false },
+        y: { display: false }
+      }
+    }
+  });
+}
 
 /**
  * PatientToday

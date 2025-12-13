@@ -73,7 +73,23 @@ document.addEventListener("DOMContentLoaded", function () {
         ? data.confirmPassword.trim()
         : "";
 
-      // 2. 🔑 Password Mismatch Validation
+      // 2. 🔑 Password Strength Validation
+      const passwordRegex = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+      if (!passwordRegex.test(password)) {
+        Swal.fire({
+          icon: "error",
+          title: "Weak Password",
+          html: `Password must contain:<br>
+            • At least 8 characters<br>
+            • At least 1 uppercase letter<br>
+            • At least 1 number<br>
+            • At least 1 special character (!@#$%^&* etc.)`,
+        });
+        passwordInput.focus();
+        return; // Stop form submission
+      }
+
+      // 3. 🔑 Password Mismatch Validation
       if (password !== confirmPassword) {
         Swal.fire({
           icon: "error",
@@ -85,7 +101,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return; // Stop form submission
       }
 
-      // 3. API Submission (If all validations pass)
+      // 4. API Submission (If all validations pass)
       try {
         const response = await fetch("/register", {
           method: "POST",

@@ -79,13 +79,18 @@ document.addEventListener("DOMContentLoaded", function () {
       if (data.role !== admin) {
         const userAccess = document.getElementById("userAccess");
         if (userAccess) userAccess.style.display = "none";
+        const patientList = document.getElementById("patientList");
+        if (patientList) patientList.style.display = "none";
       }
 
       // Dashboard: show only for doctor, admin, staff
       if (![doctor, admin, staff].includes(data.role)) {
         const dashboard = document.getElementById("dashboard");
         if (dashboard) dashboard.style.display = "none";
+      }
 
+      // Inventory: show only for admin and staff (not doctor)
+      if (![admin, staff].includes(data.role)) {
         const inventory = document.getElementById("inventory");
         if (inventory) inventory.style.display = "none";
       }

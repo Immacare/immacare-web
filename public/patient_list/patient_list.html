@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Immacare+</title>
+    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css" />
+    <link
+      rel="stylesheet"
+      href="/bootstrap-icons/font/bootstrap-icons.min.css"
+    />
+    <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/jquery/jquery.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="/datatables.net-dt/css/dataTables.dataTables.css"
+    />
+    <script src="/datatables.net/js/dataTables.js"></script>
+    <script src="/datatables.net/js/dataTables.min.js"></script>
+
+    <script src="patient_list.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  </head>
+
+  <body style="font-size: 13px">
+    <div class="card shadow-lg rounded p-4">
+      <h2>
+        Patient List
+      </h2>
+      <div class="wrapper">
+        <div class="row mb-3">
+          <!-- Left side -->
+          <div class="col-md-4 d-flex align-items-center">
+            <label for="fullname" class="col-sm-4 col-form-label">Name:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control criteria" id="fullname" />
+            </div>
+          </div>
+
+          <div class="col-md-2 d-flex align-items-center">
+            <button
+              type="button"
+              class="btn btn-info btn-sm w-50 me-2"
+              onclick="clearCriteria()"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              class="btn btn-success btn-sm w-50"
+              onclick="searchPatient()"
+            >
+              Search
+            </button>
+          </div>
+        </div>
+        <table
+          id="patientTable"
+          class="table table-light table-striped table-bordered table-hover"
+        >
+          <thead>
+            <tr>
+              <th class="hide-col">UserID</th>
+              <th>Action</th>
+              <th>Name</th>
+              <th>Account Status</th>
+              <th>Email</th>
+              <th>Last update</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
+
+      <!-- Modal for View/Update Patient-->
+      <div
+        class="modal fade"
+        id="updateModal"
+        tabindex="-1"
+        aria-labelledby="exampleModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog modal-xl">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="exampleModalLabel">
+                Update Patient
+              </h1>
+              <input type="hidden" id="modal_user_id" />
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              ></button>
+            </div>
+            <div class="modal-body">
+              <div class="row mb-3">
+                <!-- Left side -->
+                <div class="col-md-6 d-flex align-items-center">
+                  <label for="firstname" class="col-sm-6 col-form-label"
+                    ><strong>Basic Information</strong></label
+                  >
+                </div>
+
+                <!-- Right side -->
+                <div class="col-md-6 d-flex align-items-center">
+                  <label for="lastname" class="col-sm-6 col-form-label"
+                    ><strong>Account Information</strong></label
+                  >
+                </div>
+              </div>
+              <div class="container mt-4">
+                <div class="row mb-3">
+                  <!-- Left side -->
+                  <div class="col-md-6 d-flex align-items-center">
+                    <label for="firstname" class="col-sm-4 col-form-label"
+                      >Firstname:</label
+                    >
+                    <div class="col-sm-8">
+                      <input
+                        type="text"
+                        class="form-control updateInput"
+                        id="firstname"
+                        name="firstname"
+                        style="background-color: #dddddd; cursor: not-allowed"
+                        readonly
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Right side -->
+                  <div class="col-md-6 d-flex align-items-center">
+                    <label for="role" class="col-sm-4 col-form-label"
+                      >Role:</label
+                    >
+                    <div class="col-sm-8">
+                      <input
+                        type="text"
+                        class="form-control"
+                        id="role"
+                        value="Patient"
+                        style="background-color: #dddddd; cursor: not-allowed"
+                        readonly
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <!-- Left side -->
+                  <div class="col-md-6 d-flex align-items-center">
+                    <label for="middlename" class="col-sm-4 col-form-label"
+                      >Middlename:</label
+                    >
+                    <div class="col-sm-8">
+                      <input
+                        type="text"
+                        class="form-control updateInput"
+                        id="middlename"
+                        name="middlename"
+                        style="background-color: #dddddd; cursor: not-allowed"
+                        readonly
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Right side -->
+                  <div class="col-md-6 d-flex align-items-center">
+                    <label for="email" class="col-sm-4 col-form-label"
+                      >Email:</label
+                    >
+                    <div class="col-sm-8">
+                      <input
+                        type="text"
+                        class="form-control updateInput"
+                        id="email"
+                        name="email"
+                        tabindex="1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <!-- Left side -->
+                  <div class="col-md-6 d-flex align-items-center">
+                    <label for="lastname" class="col-sm-4 col-form-label"
+                      >Lastname:</label
+                    >
+                    <div class="col-sm-8">
+                      <input
+                        type="text"
+                        class="form-control updateInput"
+                        id="lastname"
+                        name="lastname"
+                        style="background-color: #dddddd; cursor: not-allowed"
+                        readonly
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Right side -->
+                  <div class="col-md-6 d-flex align-items-center">
+                    <label for="password" class="col-sm-4 col-form-label"
+                      >Password:</label
+                    >
+                    <div class="col-sm-8">
+                      <input
+                        type="password"
+                        class="form-control updateInput"
+                        id="password"
+                        name="password"
+                        tabindex="2"
+                        placeholder="Leave blank to keep current"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <!-- Left side -->
+                  <div class="col-md-6 d-flex align-items-center">
+                    <label for="gender" class="col-sm-4 col-form-label"
+                      >Gender:</label
+                    >
+                    <div class="col-sm-8">
+                      <input
+                        type="text"
+                        class="form-control updateInput"
+                        id="gender"
+                        name="gender"
+                        style="background-color: #dddddd; cursor: not-allowed"
+                        readonly
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Right side -->
+                  <div class="col-md-6 d-flex align-items-center">
+                    <label for="passwordconfirm" class="col-sm-4 col-form-label"
+                      >Confirm Password:</label
+                    >
+                    <div class="col-sm-8">
+                      <input
+                        type="password"
+                        class="form-control updateInput"
+                        id="passwordconfirm"
+                        name="passwordconfirm"
+                        tabindex="3"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row mb-3">
+                  <!-- Left side -->
+                  <div class="col-md-6 d-flex align-items-center">
+                    <label for="birthdate" class="col-sm-4 col-form-label"
+                      >Birthdate:</label
+                    >
+                    <div class="col-sm-8">
+                      <input
+                        type="text"
+                        class="form-control updateInput"
+                        id="birthdate"
+                        name="birthdate"
+                        style="background-color: #dddddd; cursor: not-allowed"
+                        readonly
+                      />
+                    </div>
+                  </div>
+
+                  <!-- Right side -->
+                  <div class="col-md-6 d-flex align-items-center">
+                    <label for="status" class="col-sm-4 col-form-label"
+                      >Status:</label
+                    >
+                    <div class="col-sm-8">
+                      <select
+                        class="form-select updateInput"
+                        id="status"
+                        name="status"
+                        tabindex="4"
+                      >
+                        <option value="" selected disabled>
+                          Select a status
+                        </option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                onclick="updatePatient()"
+              >
+                Save changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -265,18 +265,7 @@ $(document).ready(function () {
       },
     ],
     createdRow: function (row, data, dataIndex) {
-      // Highlight rows based on stock status
-      const abl = parseFloat(data.abl) || 0;
-      const actualStock = parseFloat(data.actual_stock) || 0;
-      const qtyUsed = parseFloat(data.qty_used) || 0;
-      const qtyWasted = parseFloat(data.qty_wasted) || 0;
-      const endingBalance = actualStock - qtyUsed - qtyWasted;
-
-      if (endingBalance < abl) {
-        $(row).addClass('table-danger'); // Red highlight for below ABL
-      } else if (endingBalance <= abl * 1.2) {
-        $(row).addClass('table-warning'); // Yellow highlight for approaching reorder
-      }
+      // Row styling handled by CSS alternating colors only (white/gray)
     },
   });
 

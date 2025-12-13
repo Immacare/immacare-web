@@ -56,11 +56,11 @@ const patientProfileSchema = new mongoose.Schema({
   },
   age: {
     type: String, // Keeping as string to match MySQL format
-    required: true
+    default: null
   },
   civilStatus: {
     type: String,
-    required: true
+    default: null
   },
   mobileNumber: {
     type: String,
