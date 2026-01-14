@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // If already verified (redirected from API), show success immediately
   if (alreadyVerified) {
-    const message = alreadyWasVerified 
+    const message = alreadyWasVerified
       ? "Email already verified. You can now log in."
       : "Email verified successfully! You can now log in.";
     showSuccess(message);
@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
     showError("Invalid or expired verification token. Please request a new verification email.");
     return;
   }
-  
+
   if (hasError === "notfound") {
     showError("User account not found. Please contact support.");
     return;
@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", function () {
     loadingState.style.display = "none";
     errorState.style.display = "none";
     successState.style.display = "block";
-    
+
     // Auto-redirect countdown
     let countdown = 5;
     const countdownElement = document.getElementById("countdown");
@@ -90,7 +90,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       if (countdown <= 0) {
         clearInterval(countdownInterval);
-        window.location.href = "../login/login.html";
+        window.location.href = "/login";
       }
     }, 1000);
   }
@@ -111,7 +111,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (resendBtn) {
     resendBtn.addEventListener("click", async function () {
       const email = prompt("Please enter your email address:");
-      
+
       if (!email) {
         return;
       }

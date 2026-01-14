@@ -1,15 +1,108 @@
-$(document).ready(function () {});
-document.addEventListener("DOMContentLoaded", function () {
-  const iframe = document.getElementById("main-content-frame");
-  const lastPage =
-    localStorage.getItem("lastIframePage") || "../homepage/homepage.html";
-  iframe.src = lastPage;
+$(document).ready(function () { });
+
+// Route mapping: URL path -> iframe content path
+const routeMap = {
+  '/dashboard': '../dashboard/dashboard.html',
+  '/home': '../homepage/homepage.html',
+  '/appointment_booking': '../appointment_booking/appointment_booking.html',
+  '/appointment_list': '../appointment_booking/appointment_list.html',
+  '/patient': '../patient/patient_profile.html',
+  '/patient_profile': '../patient/patient_profile.html',
+  '/patient_list': '../patient_list/patient_list.html',
+  '/doctor': '../doctor/doctors_list.html',
+  '/doctors_list': '../doctor/doctors_list.html',
+  '/doctors_profile': '../doctor/doctors_profile.html',
+  '/inventory': '../inventory/inventory.html',
+  '/user_access': '../user_access/user_access.html',
+  '/users_account': '../users_account/users_account.html',
+  '/analytics': '../analytics/analytics.html',
+  '/financial_report': '../financial_report/financial_report.html',
+  '/header_menu': '../homepage/homepage.html'
+};
+
+// Reverse mapping: iframe path -> URL path (for updating URL when iframe loads)
+const reverseRouteMap = {};
+Object.keys(routeMap).forEach(key => {
+  const iframePath = routeMap[key];
+  // Use the first matching route for each iframe path
+  if (!reverseRouteMap[iframePath]) {
+    reverseRouteMap[iframePath] = key;
+  }
 });
 
-function loadPage(pageUrl) {
+// Get the iframe content path from current URL
+function getIframePathFromUrl() {
+  const path = window.location.pathname;
+  return routeMap[path] || '../homepage/homepage.html';
+}
+
+// Get the URL path from iframe content path
+function getUrlFromIframePath(iframePath) {
+  // Normalize the path for comparison
+  const normalizedPath = iframePath.replace(/^\.\.\//, '../');
+  return reverseRouteMap[normalizedPath] || '/dashboard';
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const iframe = document.getElementById("main-content-frame");
+  
+  // Load content based on current URL path instead of localStorage
+  const iframePath = getIframePathFromUrl();
+  iframe.src = iframePath;
+});
+
+function loadPage(pageUrl, updateHistory = true) {
   const iframe = document.getElementById("main-content-frame");
   iframe.src = pageUrl;
   localStorage.setItem("lastIframePage", pageUrl);
+  
+  // Update browser URL using History API
+  if (updateHistory) {
+    const newUrl = getUrlFromIframePath(pageUrl);
+    if (newUrl && window.location.pathname !== newUrl) {
+      window.history.pushState({ iframePath: pageUrl }, '', newUrl);
+    }
+  }
+}
+
+// Handle browser back/forward buttons
+window.addEventListener('popstate', function(event) {
+  if (event.state && event.state.iframePath) {
+    loadPage(event.state.iframePath, false);
+  } else {
+    // Fallback: get iframe path from URL
+    const iframePath = getIframePathFromUrl();
+    const iframe = document.getElementById("main-content-frame");
+    if (iframe) {
+      iframe.src = iframePath;
+    }
+  }
+  
+  // Update active nav link
+  updateActiveNavLink();
+});
+
+// Update active nav link based on current URL
+function updateActiveNavLink() {
+  const currentPath = window.location.pathname;
+  const navLinks = document.querySelectorAll(".nav-link");
+  
+  navLinks.forEach(function (nav) {
+    nav.classList.remove("active");
+    
+    // Check if this nav link's onclick matches current path
+    const onclickAttr = nav.getAttribute('onclick');
+    if (onclickAttr) {
+      const match = onclickAttr.match(/loadPage\(['"]([^'"]+)['"]\)/);
+      if (match) {
+        const iframePath = match[1];
+        const urlPath = getUrlFromIframePath(iframePath);
+        if (urlPath === currentPath) {
+          nav.classList.add("active");
+        }
+      }
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -26,11 +119,10 @@ document.addEventListener("DOMContentLoaded", function () {
       this.classList.add("active");
     });
   });
+  
+  // Set initial active state based on URL
+  updateActiveNavLink();
 });
-
-function loadPage(url) {
-  document.getElementById("main-content-frame").src = url;
-}
 document.addEventListener("DOMContentLoaded", function () {
   fetch("/homepage", {
     method: "GET",
@@ -62,10 +154,14 @@ document.addEventListener("DOMContentLoaded", function () {
         const homeEl = document.getElementById("home");
         if (homeEl) homeEl.style.display = "none";
       }
-      if (data.role !== patient) {
+      // Only set default dashboard for non-patients if URL is /header_menu (no specific page)
+      // This preserves URL-based routing when user navigates to specific pages
+      if (data.role !== patient && window.location.pathname === '/header_menu') {
         const mainFrame = document.getElementById("main-content-frame");
         if (mainFrame) {
           mainFrame.src = "../dashboard/dashboard.html";
+          // Update URL to reflect the dashboard
+          window.history.replaceState({ iframePath: '../dashboard/dashboard.html' }, '', '/dashboard');
         }
       }
       if (data.role !== patient) {
@@ -155,7 +251,7 @@ document.addEventListener("DOMContentLoaded", function () {
         .then((response) => response.json())
         .then((data) => {
           if (data.message === "Logged out successfully") {
-            window.location.href = "../landingpage/landingpage.html";
+            window.location.href = "/landingpage";
           } else {
             alert("Logout failed: " + data.message);
           }

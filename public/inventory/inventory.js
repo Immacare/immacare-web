@@ -21,7 +21,97 @@ $(document).ready(function () {
     searching: false,
     lengthChange: false,
     dom: "Bfrtip",
-    buttons: ["excel", "pdf"],
+    buttons: [
+      {
+        extend: "excel",
+        text: "Export to Excel",
+        title: "Inventory Report",
+        filename: "Inventory_Report_" + new Date().toISOString().slice(0, 10),
+        exportOptions: {
+          columns: ":visible"
+        }
+      },
+      {
+        extend: "pdf",
+        text: "Export to PDF",
+        title: "IMMACARE CLINIC\nInventory Report",
+        filename: "Inventory_Report_" + new Date().toISOString().slice(0, 10),
+        orientation: "landscape",
+        pageSize: "A4",
+        exportOptions: {
+          columns: ":visible"
+        },
+        customize: function(doc) {
+          // Get user info from parent window (iframe context)
+          let userName = 'Unknown';
+          let userRole = 'Unknown';
+          try {
+            if (window.parent && window.parent !== window) {
+              const parentUsername = window.parent.document.getElementById('usernameDisplay');
+              const parentRole = window.parent.document.getElementById('role');
+              if (parentUsername && parentUsername.textContent) {
+                userName = parentUsername.textContent.trim();
+              }
+              if (parentRole && parentRole.value) {
+                userRole = parentRole.value.charAt(0).toUpperCase() + parentRole.value.slice(1);
+              }
+            }
+          } catch (e) {}
+          
+          // Add header with user info
+          doc.content.splice(0, 0, {
+            text: 'IMMACARE CLINIC',
+            style: 'clinicHeader',
+            alignment: 'center',
+            margin: [0, 0, 0, 5]
+          });
+          doc.content.splice(1, 0, {
+            text: 'Inventory Report',
+            style: 'reportTitle',
+            alignment: 'center',
+            margin: [0, 0, 0, 10]
+          });
+          doc.content.splice(2, 0, {
+            columns: [
+              { text: 'Report Period: All Items (Current Inventory)', style: 'subheader', alignment: 'left' },
+              { text: 'Generated: ' + new Date().toLocaleString(), style: 'subheader', alignment: 'right' }
+            ],
+            margin: [0, 0, 0, 5]
+          });
+          doc.content.splice(3, 0, {
+            columns: [
+              { text: '', width: '*' },
+              { text: 'Role: ' + userRole + '\nFull Name: ' + userName, style: 'userInfo', alignment: 'right' }
+            ],
+            margin: [0, 0, 0, 15]
+          });
+          
+          // Remove default title
+          if (doc.content[4] && doc.content[4].text === 'IMMACARE CLINIC\nInventory Report') {
+            doc.content.splice(4, 1);
+          }
+          
+          // Add custom styles
+          doc.styles.clinicHeader = {
+            fontSize: 18,
+            bold: true,
+            color: '#0066cc'
+          };
+          doc.styles.reportTitle = {
+            fontSize: 14,
+            bold: true
+          };
+          doc.styles.subheader = {
+            fontSize: 10,
+            color: '#666'
+          };
+          doc.styles.userInfo = {
+            fontSize: 10,
+            color: '#333'
+          };
+        }
+      }
+    ],
     scrollX: false,
     autoWidth: false,
     responsive: false,

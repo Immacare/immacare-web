@@ -341,7 +341,7 @@ document.addEventListener("DOMContentLoaded", function () {
               timer: 2000,
               showConfirmButton: false,
             }).then(() => {
-              window.location.href = "../patient/patient_list.html";
+              window.location.href = "/patient_list";
             });
           });
         }

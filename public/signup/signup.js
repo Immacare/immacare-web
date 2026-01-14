@@ -142,7 +142,7 @@ document.addEventListener("DOMContentLoaded", function () {
             allowEscapeKey: false
           }).then((swalResult) => {
             if (swalResult.isConfirmed) {
-              window.location.href = "../login/login.html";
+              window.location.href = "/login";
             }
           });
 
@@ -153,16 +153,16 @@ document.addEventListener("DOMContentLoaded", function () {
               resendLink.addEventListener("click", async (e) => {
                 e.preventDefault();
                 const email = emailInput.value.trim().toLowerCase();
-                
+
                 try {
                   const resendResponse = await fetch("/resend-verification", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ email })
                   });
-                  
+
                   const resendResult = await resendResponse.json();
-                  
+
                   Swal.fire({
                     icon: resendResponse.ok ? "success" : "error",
                     title: resendResponse.ok ? "Email Sent!" : "Error",

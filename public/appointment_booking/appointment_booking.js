@@ -363,8 +363,7 @@ function initBookingTable() {
             const showViewBooking = role !== "doctor";
             const showProfileButton = role === "doctor";
 
-            return `
-      ${
+            return `<div class="d-flex flex-nowrap">${
         showViewBooking
           ? `<button
               class="btn btn-info btn-sm get-user-btn adminBtn me-2"
@@ -376,12 +375,10 @@ function initBookingTable() {
               View Booking
             </button>`
           : ""
-      }
-
-      ${
+      }${
         !hideTagButton
           ? `<button
-              class="btn btn-secondary btn-sm get-user-btn adminBtn me-2"
+              class="btn btn-secondary btn-sm get-user-btn adminBtn"
               onclick="tagModal(this)" 
               data-id="${row.id}"
               data-status="${row.status}"
@@ -390,9 +387,7 @@ function initBookingTable() {
               Tag
             </button>`
           : ""
-      }
-
-      ${
+      }${
         showProfileButton
           ? `<a
               class="btn btn-success btn-sm get-user-btn adminBtn"
@@ -403,8 +398,7 @@ function initBookingTable() {
               View Patient Profile
             </a>`
           : ""
-      }
-    `;
+      }</div>`;
           },
         },
         { data: "fullname" },
@@ -775,8 +769,7 @@ async function bookAppointment() {
             showConfirmButton: false,
             timerProgressBar: true,
           }).then(() => {
-            window.location.href =
-              "../appointment_booking/appointment_list.html";
+            window.location.href = "/appointment_booking/appointment_list.html";
           });
         },
         error: function (xhr) {

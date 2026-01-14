@@ -44,7 +44,7 @@ form.addEventListener("submit", async (e) => {
 
         if (res.ok) {
           // alert("Login successful!");
-          window.location.href = "/header_menu/header_menu.html";
+          window.location.href = "/dashboard";
         } else {
           // Check if verification is required
           if (res.status === 403 && data.requiresVerification) {
@@ -68,21 +68,21 @@ form.addEventListener("submit", async (e) => {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: data.email })
                   })
-                  .then(res => res.json())
-                  .then(result => {
-                    Swal.fire({
-                      icon: 'success',
-                      title: 'Email Sent!',
-                      text: result.message || 'Verification email has been sent. Please check your inbox.'
+                    .then(res => res.json())
+                    .then(result => {
+                      Swal.fire({
+                        icon: 'success',
+                        title: 'Email Sent!',
+                        text: result.message || 'Verification email has been sent. Please check your inbox.'
+                      });
+                    })
+                    .catch(error => {
+                      Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to resend verification email. Please try again later.'
+                      });
                     });
-                  })
-                  .catch(error => {
-                    Swal.fire({
-                      icon: 'error',
-                      title: 'Error',
-                      text: 'Failed to resend verification email. Please try again later.'
-                    });
-                  });
                 }
               });
             } else {
@@ -109,7 +109,7 @@ form.addEventListener("submit", async (e) => {
     const data = await response.json();
 
     if (response.ok) {
-     
+
     } else {
       alert(data.message); // e.g., "Invalid credentials"
     }

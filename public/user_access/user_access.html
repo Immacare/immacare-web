@@ -19,7 +19,7 @@
     <script src="/datatables.net/js/dataTables.min.js"></script>
 
     <script src="user_access.js"></script>
-    <script src="user_access.css"></script>
+    <link rel="stylesheet" href="user_access.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
 
@@ -489,12 +489,12 @@
                     >
                     <div class="col-sm-8">
                       <select
-                        class="form-select"
+                        class="form-select addInput"
                         id="addGender"
                         name="addGender"
                         tabindex="4"
                       >
-                        <option selected>Select Gender</option>
+                        <option value="" selected disabled>Select Gender</option>
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                       </select>

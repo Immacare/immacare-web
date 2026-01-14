@@ -2075,7 +2075,7 @@ app.use(
     secret: "your-secret-key", // TODO: Use environment variable in production for security
     resave: false, // Don't save session if it hasn't been modified
     saveUninitialized: false, // Don't create session until something is stored
-    cookie: { 
+    cookie: {
       maxAge: 1000 * 60 * 60 * 24, // Session expires after 1 day (24 hours)
       // sameSite not set - allows cookies in iframes for localhost development
       httpOnly: true, // Prevent client-side JavaScript from accessing the cookie
@@ -2086,10 +2086,73 @@ app.use(
 );
 
 // ============================================================================
+// SECTION: CLEAN URL ROUTES (MUST BE BEFORE STATIC MIDDLEWARE)
+// ============================================================================
+// These routes serve pages directly at clean URLs without redirecting
+// URL stays at /landingpage instead of changing to /landingpage/landingpage.html
+// This provides cleaner, more user-friendly URLs
+// IMPORTANT: These must be defined BEFORE express.static to take precedence
+
+// Root route - serve landing page (keep URL clean at /)
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "landingpage", "landingpage.html"));
+});
+
+// Define page directories that follow the folder/folder.html pattern
+// NOTE: 'homepage' is NOT included because /homepage is an API endpoint that returns session data
+const cleanUrlPages = [
+  'landingpage',
+  'login',
+  'signup',
+  'verify-email'
+];
+
+// App pages that require authentication - these all serve header_menu.html
+// The header_menu.js will read the URL and load the correct iframe content
+const appPages = [
+  'dashboard',
+  'appointment_booking',
+  'appointment_list',
+  'patient',
+  'patient_profile',
+  'patient_list',
+  'doctor',
+  'doctors_list',
+  'doctors_profile',
+  'inventory',
+  'user_access',
+  'users_account',
+  'header_menu',
+  'analytics',
+  'financial_report',
+  'home'
+];
+
+// Serve pages directly at clean URLs (no redirect, URL stays clean)
+cleanUrlPages.forEach(page => {
+  app.get(`/${page}`, (req, res) => {
+    res.sendFile(path.join(__dirname, "public", page, `${page}.html`));
+  });
+});
+
+// Serve header_menu.html for all app pages (SPA-style routing)
+// The JavaScript will handle loading the correct content based on URL
+appPages.forEach(page => {
+  app.get(`/${page}`, (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "header_menu", "header_menu.html"));
+  });
+});
+
+// ============================================================================
 // SECTION 5: STATIC FILE SERVING
 // ============================================================================
-// Serve static files from the web_immacare directory (legacy/main HTML files)
-app.use(express.static(path.join(__dirname, "web_immacare")));
+// Serve static files from the public directory (main HTML files, CSS, JS, assets)
+// IMPORTANT: index: false prevents express.static from serving directories as index pages
+// This ensures our clean URL routes above take precedence
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
+
+// Serve static files from the web_immacare directory (legacy/additional files)
+app.use(express.static(path.join(__dirname, "web_immacare"), { index: false }));
 
 // Serve Bootstrap CSS/JS framework from node_modules
 app.use(
@@ -2118,11 +2181,6 @@ app.use(
 // Serve jQuery library (dependency for Bootstrap and DataTables)
 app.use("/jquery", express.static(__dirname + "/node_modules/jquery/dist"));
 
-// Root route - redirect to landing page
-app.get("/", (req, res) => {
-  res.redirect("/landingpage/landingpage.html");
-});
-
 // ============================================================================
 // SECTION: PREDICTIVE ANALYTICS ENDPOINTS (ADMIN ONLY)
 // ============================================================================
@@ -2140,12 +2198,12 @@ const requireAdmin = (req, res, next) => {
   console.log('🔍 [AUTH DEBUG] req.session.userId:', req.session?.userId || 'undefined');
   console.log('🔍 [AUTH DEBUG] req.session.role:', req.session?.role || 'undefined');
   console.log('🔍 [AUTH DEBUG] req.headers.cookie:', req.headers.cookie ? req.headers.cookie.substring(0, 100) : 'missing');
-  
+
   // Check session the same way /homepage does - check userId first
   if (!req.session || !req.session.userId) {
     console.log('❌ [AUTH DEBUG] Authentication failed - no session or userId');
-    return res.status(401).json({ 
-      success: false, 
+    return res.status(401).json({
+      success: false,
       message: 'Authentication required',
       debug: {
         hasSession: !!req.session,
@@ -2157,13 +2215,13 @@ const requireAdmin = (req, res, next) => {
       }
     });
   }
-  
+
   // Then check if admin
   if (req.session.role !== 'admin') {
     console.log('❌ [AUTH DEBUG] Authorization failed - not admin, role:', req.session.role);
     return res.status(403).json({ success: false, message: 'Admin access required' });
   }
-  
+
   console.log('✅ [AUTH DEBUG] Authentication successful - admin user:', req.session.email);
   next();
 };
@@ -2192,15 +2250,15 @@ app.get('/analytics/list-gemini-models', requireAdmin, async (req, res) => {
   try {
     const https = require('https');
     const API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyD1dUGmiSer-rapBfWza_CaicUZyfwYoK0';
-    
+
     // Try different API endpoints to list models
     const endpoints = [
       `https://generativelanguage.googleapis.com/v1/models?key=${API_KEY}`,
       `https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`
     ];
-    
+
     const results = {};
-    
+
     for (const endpoint of endpoints) {
       try {
         const urlObj = new URL(endpoint);
@@ -2223,13 +2281,13 @@ app.get('/analytics/list-gemini-models', requireAdmin, async (req, res) => {
             reject(new Error('Timeout'));
           });
         });
-        
+
         results[endpoint] = response;
       } catch (err) {
         results[endpoint] = { error: err.message };
       }
     }
-    
+
     res.json({
       success: true,
       availableModels: results
@@ -2252,12 +2310,12 @@ app.get('/analytics/test-gemini', requireAdmin, async (req, res) => {
   try {
     console.log('🧪 Testing Gemini API connection...');
     const { generateInsights } = require('./config/gemini');
-    
+
     const testPrompt = 'Say "Hello, AI is working!" in one sentence.';
     const testData = { test: true };
-    
+
     const result = await generateInsights(testPrompt, testData, 'test_connection');
-    
+
     res.json({
       success: true,
       message: 'Gemini API is working!',
@@ -2328,20 +2386,20 @@ app.get('/analytics/appointment-forecast', requireAdmin, async (req, res) => {
     const today = new Date();
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(today.getDate() - 30);
-    
+
     const appointments = await Appointment.find({
       createdAt: { $gte: thirtyDaysAgo }
     })
       .sort({ createdAt: 1 })
       .lean();
-    
+
     // Group by date
     const dailyCounts = {};
     appointments.forEach(apt => {
       const date = new Date(apt.createdAt).toISOString().split('T')[0];
       dailyCounts[date] = (dailyCounts[date] || 0) + 1;
     });
-    
+
     // Prepare historical data (last 21 days)
     const historical = [];
     for (let i = 20; i >= 0; i--) {
@@ -2353,12 +2411,12 @@ app.get('/analytics/appointment-forecast', requireAdmin, async (req, res) => {
         count: dailyCounts[dateStr] || 0
       });
     }
-    
+
     // Simple forecast: average of last 7 days + trend
     const last7Days = historical.slice(-7).map(d => d.count);
     const avg = last7Days.reduce((a, b) => a + b, 0) / 7;
     const trend = (last7Days[6] - last7Days[0]) / 7;
-    
+
     // Forecast next 7 days
     const forecast = [];
     for (let i = 1; i <= 7; i++) {
@@ -2370,7 +2428,7 @@ app.get('/analytics/appointment-forecast', requireAdmin, async (req, res) => {
         predicted: predicted
       });
     }
-    
+
     res.json({
       success: true,
       data: {
@@ -2394,28 +2452,28 @@ app.get('/analytics/inventory-forecast', requireAdmin, async (req, res) => {
     const inventory = await Inventory.find()
       .populate('category', 'category')
       .lean();
-    
+
     // Get appointment history for usage estimation
     const last30Days = new Date();
     last30Days.setDate(last30Days.getDate() - 30);
     const recentAppointments = await Appointment.countDocuments({
       createdAt: { $gte: last30Days }
     });
-    
+
     // Estimate usage based on appointments (simple heuristic)
     const dailyAppointmentAvg = recentAppointments / 30;
-    
+
     const reorderPredictions = inventory.map(item => {
       const currentQty = item.quantity || 0;
       const avgQty = item.averageQuantity || currentQty || 10;
       const reorderThreshold = Math.max(5, Math.floor(avgQty * 0.3));
-      
+
       // Estimate days until reorder needed (simplified)
       const estimatedDailyUsage = Math.max(0.1, dailyAppointmentAvg * 0.1);
-      const daysUntilReorder = currentQty > reorderThreshold 
+      const daysUntilReorder = currentQty > reorderThreshold
         ? Math.floor((currentQty - reorderThreshold) / estimatedDailyUsage)
         : 0;
-      
+
       return {
         item: item.item,
         currentQuantity: currentQty,
@@ -2425,14 +2483,14 @@ app.get('/analytics/inventory-forecast', requireAdmin, async (req, res) => {
         needsReorder: daysUntilReorder <= 7 && daysUntilReorder > 0
       };
     });
-    
+
     // Sort by days until reorder (soonest first)
     reorderPredictions.sort((a, b) => {
       if (a.needsReorder && !b.needsReorder) return -1;
       if (!a.needsReorder && b.needsReorder) return 1;
       return a.daysUntilReorder - b.daysUntilReorder;
     });
-    
+
     res.json({
       success: true,
       data: {
@@ -2455,7 +2513,7 @@ app.get('/analytics/health-risk-analysis', requireAdmin, async (req, res) => {
     const patients = await PatientProfile.find()
       .populate('userId', 'firstname lastname')
       .lean();
-    
+
     // Get appointment data for each patient
     const patientIds = patients.map(p => p._id);
     const appointments = await Appointment.find({
@@ -2463,7 +2521,7 @@ app.get('/analytics/health-risk-analysis', requireAdmin, async (req, res) => {
     })
       .sort({ createdAt: -1 })
       .lean();
-    
+
     // Group appointments by patient
     const appointmentsByPatient = {};
     appointments.forEach(apt => {
@@ -2473,44 +2531,44 @@ app.get('/analytics/health-risk-analysis', requireAdmin, async (req, res) => {
       }
       appointmentsByPatient[pid].push(apt);
     });
-    
+
     // Calculate risk levels for each patient
     const riskPatients = patients.map(patient => {
       const patientApts = appointmentsByPatient[patient._id.toString()] || [];
       const lastApt = patientApts.length > 0 ? patientApts[0] : null;
-      
+
       // Risk calculation factors
       let riskScore = 0;
       const concerns = [];
-      
+
       // Age factor
       const age = parseInt(patient.age) || 0;
       if (age >= 65) riskScore += 3;
       else if (age >= 50) riskScore += 2;
       else if (age >= 40) riskScore += 1;
-      
+
       // Chronic illness
       if (patient.chronicIllness && patient.chronicIllness.trim()) {
         riskScore += 4;
         concerns.push('Chronic illness: ' + patient.chronicIllness);
       }
-      
+
       // Past medical conditions
       if (patient.pastMedicalCondition && patient.pastMedicalCondition.trim()) {
         riskScore += 2;
         concerns.push('Past conditions: ' + patient.pastMedicalCondition);
       }
-      
+
       // Allergies
       if (patient.allergies && patient.allergies.trim()) {
         riskScore += 1;
         concerns.push('Allergies: ' + patient.allergies);
       }
-      
+
       // Appointment frequency (more frequent = higher risk)
       if (patientApts.length > 5) riskScore += 2;
       else if (patientApts.length > 2) riskScore += 1;
-      
+
       // Time since last appointment (long time = potential risk)
       if (lastApt) {
         const lastAptDate = new Date(lastApt.createdAt);
@@ -2520,19 +2578,19 @@ app.get('/analytics/health-risk-analysis', requireAdmin, async (req, res) => {
       } else {
         riskScore += 1; // Never had appointment
       }
-      
+
       // Determine risk level
       let riskLevel = 'Low';
       if (riskScore >= 7) riskLevel = 'High';
       else if (riskScore >= 4) riskLevel = 'Medium';
-      
-      const lastAptDate = lastApt 
+
+      const lastAptDate = lastApt
         ? new Date(lastApt.createdAt).toLocaleDateString()
         : 'Never';
-      
+
       return {
         patientId: patient._id.toString(),
-        name: patient.userId 
+        name: patient.userId
           ? `${patient.userId.firstname} ${patient.userId.lastname}`
           : `${patient.firstname} ${patient.lastname}`,
         age: patient.age,
@@ -2540,24 +2598,24 @@ app.get('/analytics/health-risk-analysis', requireAdmin, async (req, res) => {
         riskScore: riskScore,
         primaryConcern: concerns[0] || 'Routine care',
         lastAppointment: lastAptDate,
-        recommendation: riskLevel === 'High' 
+        recommendation: riskLevel === 'High'
           ? 'Schedule follow-up appointment soon'
           : riskLevel === 'Medium'
-          ? 'Monitor regularly'
-          : 'Continue routine care'
+            ? 'Monitor regularly'
+            : 'Continue routine care'
       };
     });
-    
+
     // Sort by risk score (highest first)
     riskPatients.sort((a, b) => b.riskScore - a.riskScore);
-    
+
     // Count risk distribution
     const riskDistribution = {
       high: riskPatients.filter(p => p.riskLevel === 'High').length,
       medium: riskPatients.filter(p => p.riskLevel === 'Medium').length,
       low: riskPatients.filter(p => p.riskLevel === 'Low').length
     };
-    
+
     res.json({
       success: true,
       data: {
@@ -2579,24 +2637,24 @@ app.get('/analytics/health-risk-analysis', requireAdmin, async (req, res) => {
 app.post('/analytics/ai/appointment-insights', requireAdmin, async (req, res) => {
   try {
     console.log('🤖 [AI] Generating appointment insights...');
-    
+
     // Get forecast data directly (same logic as GET endpoint)
     const today = new Date();
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(today.getDate() - 30);
-    
+
     const appointments = await Appointment.find({
       createdAt: { $gte: thirtyDaysAgo }
     }).sort({ createdAt: 1 }).lean();
-    
+
     console.log(`📊 [AI] Found ${appointments.length} appointments in last 30 days`);
-    
+
     const dailyCounts = {};
     appointments.forEach(apt => {
       const date = new Date(apt.createdAt).toISOString().split('T')[0];
       dailyCounts[date] = (dailyCounts[date] || 0) + 1;
     });
-    
+
     const historical = [];
     for (let i = 20; i >= 0; i--) {
       const date = new Date(today);
@@ -2607,11 +2665,11 @@ app.post('/analytics/ai/appointment-insights', requireAdmin, async (req, res) =>
         count: dailyCounts[dateStr] || 0
       });
     }
-    
+
     const last7Days = historical.slice(-7).map(d => d.count);
     const avg = last7Days.length > 0 ? last7Days.reduce((a, b) => a + b, 0) / last7Days.length : 0;
     const trend = last7Days.length >= 2 ? (last7Days[last7Days.length - 1] - last7Days[0]) / last7Days.length : 0;
-    
+
     const forecast = [];
     for (let i = 1; i <= 7; i++) {
       const date = new Date(today);
@@ -2622,10 +2680,10 @@ app.post('/analytics/ai/appointment-insights', requireAdmin, async (req, res) =>
         predicted: predicted
       });
     }
-    
+
     // Aggregate data for AI (keep it small!)
-    const historicalAvg = historical.length > 0 
-      ? historical.reduce((sum, d) => sum + d.count, 0) / historical.length 
+    const historicalAvg = historical.length > 0
+      ? historical.reduce((sum, d) => sum + d.count, 0) / historical.length
       : 0;
     const forecastAvg = forecast.length > 0
       ? forecast.reduce((sum, d) => sum + d.predicted, 0) / forecast.length
@@ -2633,24 +2691,24 @@ app.post('/analytics/ai/appointment-insights', requireAdmin, async (req, res) =>
     const peakDay = forecast.length > 0
       ? forecast.reduce((max, d) => d.predicted > max.predicted ? d : max, forecast[0])
       : { date: 'N/A', predicted: 0 };
-    
+
     const summary = {
       historicalAvg: historicalAvg,
       forecastAvg: forecastAvg,
       peakDay: peakDay
     };
-    
+
     const prompt = `Analyze this appointment forecast data for a healthcare clinic and provide actionable insights:
 - Historical average: ${summary.historicalAvg.toFixed(1)} appointments/day
 - Forecasted average: ${summary.forecastAvg.toFixed(1)} appointments/day
 - Peak predicted day: ${summary.peakDay.date} with ${summary.peakDay.predicted} appointments
 
 Provide recommendations for staffing, resource allocation, and patient scheduling optimization.`;
-    
+
     console.log('🤖 [AI] Calling Gemini API...');
     const insights = await generateInsights(prompt, summary, 'appointment_insights');
     console.log('✅ [AI] Insights generated successfully');
-    
+
     res.json({
       success: true,
       insights: insights
@@ -2658,8 +2716,8 @@ Provide recommendations for staffing, resource allocation, and patient schedulin
   } catch (error) {
     console.error('❌ [AI] Error generating appointment insights:', error);
     console.error('❌ [AI] Error stack:', error.stack);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to generate AI insights',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -2674,24 +2732,24 @@ Provide recommendations for staffing, resource allocation, and patient schedulin
 app.post('/analytics/ai/inventory-insights', requireAdmin, async (req, res) => {
   try {
     console.log('🤖 [AI] Generating inventory insights...');
-    
+
     // Get forecast data directly (same logic as GET endpoint)
     const inventory = await Inventory.find().populate('category', 'category').lean();
     console.log(`📊 [AI] Found ${inventory.length} inventory items`);
-    
+
     const last30Days = new Date();
     last30Days.setDate(last30Days.getDate() - 30);
     const recentAppointments = await Appointment.countDocuments({
       createdAt: { $gte: last30Days }
     });
     const dailyAppointmentAvg = recentAppointments / 30;
-    
+
     const reorderPredictions = inventory.map(item => {
       const currentQty = item.quantity || 0;
       const avgQty = item.averageQuantity || currentQty || 10;
       const reorderThreshold = Math.max(5, Math.floor(avgQty * 0.3));
       const estimatedDailyUsage = Math.max(0.1, dailyAppointmentAvg * 0.1);
-      const daysUntilReorder = currentQty > reorderThreshold 
+      const daysUntilReorder = currentQty > reorderThreshold
         ? Math.floor((currentQty - reorderThreshold) / estimatedDailyUsage)
         : 0;
       return {
@@ -2702,31 +2760,31 @@ app.post('/analytics/ai/inventory-insights', requireAdmin, async (req, res) => {
         needsReorder: daysUntilReorder <= 7 && daysUntilReorder > 0
       };
     });
-    
+
     reorderPredictions.sort((a, b) => {
       if (a.needsReorder && !b.needsReorder) return -1;
       if (!a.needsReorder && b.needsReorder) return 1;
       return a.daysUntilReorder - b.daysUntilReorder;
     });
-    
+
     const urgentItems = reorderPredictions.filter(p => p.needsReorder);
-    
+
     // Aggregate data
     const avgDays = reorderPredictions.length > 0 && reorderPredictions.slice(0, 10).length > 0
       ? reorderPredictions.slice(0, 10).reduce((sum, p) => sum + p.daysUntilReorder, 0) / Math.min(10, reorderPredictions.length)
       : 0;
-    
+
     const summary = {
       totalItems: reorderPredictions.length,
       urgentReorder: urgentItems.length,
       avgDaysUntilReorder: avgDays,
       topItems: urgentItems.slice(0, 5).map(i => ({ name: i.item, days: i.daysUntilReorder }))
     };
-    
-    const topItemsStr = summary.topItems.length > 0 
+
+    const topItemsStr = summary.topItems.length > 0
       ? summary.topItems.map(i => `${i.name} (${i.days} days)`).join(', ')
       : 'None';
-    
+
     const prompt = `Analyze this inventory reorder prediction data for a healthcare clinic:
 - Total items monitored: ${summary.totalItems}
 - Items needing urgent reorder (within 7 days): ${summary.urgentReorder}
@@ -2734,11 +2792,11 @@ app.post('/analytics/ai/inventory-insights', requireAdmin, async (req, res) => {
 - Top urgent items: ${topItemsStr}
 
 Provide recommendations for inventory management, ordering schedules, and cost optimization.`;
-    
+
     console.log('🤖 [AI] Calling Gemini API...');
     const insights = await generateInsights(prompt, summary, 'inventory_insights');
     console.log('✅ [AI] Insights generated successfully');
-    
+
     res.json({
       success: true,
       insights: insights
@@ -2746,8 +2804,8 @@ Provide recommendations for inventory management, ordering schedules, and cost o
   } catch (error) {
     console.error('❌ [AI] Error generating inventory insights:', error);
     console.error('❌ [AI] Error stack:', error.stack);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to generate AI insights',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -2767,25 +2825,25 @@ app.post('/analytics/ai/health-risk-insights', requireAdmin, async (req, res) =>
     const appointments = await Appointment.find({
       patientId: { $in: patientIds }
     }).sort({ createdAt: -1 }).lean();
-    
+
     const appointmentsByPatient = {};
     appointments.forEach(apt => {
       const pid = apt.patientId.toString();
       if (!appointmentsByPatient[pid]) appointmentsByPatient[pid] = [];
       appointmentsByPatient[pid].push(apt);
     });
-    
+
     const riskPatients = patients.map(patient => {
       const patientApts = appointmentsByPatient[patient._id.toString()] || [];
       const lastApt = patientApts.length > 0 ? patientApts[0] : null;
       let riskScore = 0;
       const concerns = [];
-      
+
       const age = parseInt(patient.age) || 0;
       if (age >= 65) riskScore += 3;
       else if (age >= 50) riskScore += 2;
       else if (age >= 40) riskScore += 1;
-      
+
       if (patient.chronicIllness && patient.chronicIllness.trim()) {
         riskScore += 4;
         concerns.push('Chronic illness: ' + patient.chronicIllness);
@@ -2800,7 +2858,7 @@ app.post('/analytics/ai/health-risk-insights', requireAdmin, async (req, res) =>
       }
       if (patientApts.length > 5) riskScore += 2;
       else if (patientApts.length > 2) riskScore += 1;
-      
+
       if (lastApt) {
         const daysSince = (Date.now() - new Date(lastApt.createdAt).getTime()) / (1000 * 60 * 60 * 24);
         if (daysSince > 90) riskScore += 2;
@@ -2808,26 +2866,26 @@ app.post('/analytics/ai/health-risk-insights', requireAdmin, async (req, res) =>
       } else {
         riskScore += 1;
       }
-      
+
       let riskLevel = 'Low';
       if (riskScore >= 7) riskLevel = 'High';
       else if (riskScore >= 4) riskLevel = 'Medium';
-      
+
       return {
         riskLevel: riskLevel,
         primaryConcern: concerns[0] || 'Routine care'
       };
     });
-    
+
     const distribution = {
       high: riskPatients.filter(p => p.riskLevel === 'High').length,
       medium: riskPatients.filter(p => p.riskLevel === 'Medium').length,
       low: riskPatients.filter(p => p.riskLevel === 'Low').length
     };
-    
+
     const highRiskPatients = riskPatients.filter(p => p.riskLevel === 'High').slice(0, 5);
     const totalAssessed = distribution.high + distribution.medium + distribution.low;
-    
+
     // Aggregate data
     const summary = {
       totalAssessed: totalAssessed,
@@ -2837,11 +2895,11 @@ app.post('/analytics/ai/health-risk-insights', requireAdmin, async (req, res) =>
       highRiskPercentage: totalAssessed > 0 ? ((distribution.high / totalAssessed) * 100).toFixed(1) : '0',
       topConcerns: highRiskPatients.map(p => p.primaryConcern)
     };
-    
-    const concernsStr = summary.topConcerns && summary.topConcerns.length > 0 
+
+    const concernsStr = summary.topConcerns && summary.topConcerns.length > 0
       ? summary.topConcerns.join('; ')
       : 'None identified';
-    
+
     const prompt = `Analyze this patient health risk assessment data for a healthcare clinic:
 - Total patients assessed: ${summary.totalAssessed}
 - High risk patients: ${summary.highRisk} (${summary.highRiskPercentage}%)
@@ -2850,11 +2908,11 @@ app.post('/analytics/ai/health-risk-insights', requireAdmin, async (req, res) =>
 - Common concerns among high-risk patients: ${concernsStr}
 
 Provide recommendations for proactive patient care, follow-up scheduling, and preventive health strategies.`;
-    
+
     console.log('🤖 [AI] Calling Gemini API for health risk insights...');
     const insights = await generateInsights(prompt, summary, 'health_risk_insights');
     console.log('✅ [AI] Health risk insights generated successfully');
-    
+
     res.json({
       success: true,
       insights: insights
@@ -2862,8 +2920,8 @@ Provide recommendations for proactive patient care, follow-up scheduling, and pr
   } catch (error) {
     console.error('❌ [AI] Error generating health risk insights:', error);
     console.error('❌ [AI] Error stack:', error.stack);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to generate AI insights',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -2876,14 +2934,15 @@ Provide recommendations for proactive patient care, follow-up scheduling, and pr
 // Server port configuration - use environment variable for production (Render uses PORT)
 const PORT = process.env.PORT || 3000;
 
-// Default URL to open when server starts
-const TARGET_URL = `http://localhost:${PORT}/landingpage/landingpage.html`;
+// Default URL to open when server starts - use clean URL without .html extension
+const TARGET_URL = `http://localhost:${PORT}/landingpage`;
 
 // Start the Express server and optionally open browser
 // Listen on 0.0.0.0 to allow access from mobile devices on the same network
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Server is accessible from network at http://<your-ip>:${PORT}`);
+  console.log(`Opening browser at: ${TARGET_URL}`);
 
   // Only open browser in development mode (not in production/cloud)
   if (process.env.NODE_ENV !== 'production') {
@@ -2908,18 +2967,14 @@ app.listen(PORT, '0.0.0.0', async () => {
 });
 
 // ============================================================================
-// SECTION 7: ADDITIONAL MIDDLEWARE (DUPLICATE - FOR COMPATIBILITY)
+// SECTION 7: ADDITIONAL MIDDLEWARE
 // ============================================================================
-// Note: Some middleware is duplicated here for compatibility with different routes
-// Parse JSON request bodies
+// Parse JSON request bodies (may be needed for routes defined after this point)
 app.use(bodyParser.json());
 
 // CORS is already configured in Section 4 with credentials support
 // Do not add another cors() middleware here as it overrides the credentials setting
-
-// Serve static files from the public directory (main frontend files)
-app.use(express.static(path.join(__dirname, "public")));
-app.use(express.static("public"));
+// NOTE: Static file serving is handled earlier in Section 5 - do not duplicate here
 
 // ============================================================================
 // SECTION 8: DATABASE CONNECTION
@@ -2972,21 +3027,21 @@ app.post("/login", async (req, res) => {
   try {
     // Find user in MongoDB (case-insensitive email search, only active users)
     const user = await User.findOne({ email: email.toLowerCase(), status: true });
-    
+
     if (!user) {
       return res.status(401).send({ message: "Invalid credentials" });
     }
 
     // Compare provided password with stored hashed password using bcrypt
     const isMatch = await user.comparePassword(password);
-    
+
     if (!isMatch) {
       return res.status(401).send({ message: "Invalid credentials" });
     }
 
     // Check if email is verified
     if (!user.isVerified) {
-      return res.status(403).send({ 
+      return res.status(403).send({
         message: "Please verify your email address before logging in. Check your inbox for the verification email.",
         requiresVerification: true,
         email: user.email
@@ -3091,7 +3146,7 @@ app.post("/register", async (req, res) => {
     }
 
     // Normalize gender to match enum values (Male, Female, Other)
-      // Handle any case: "male", "Male", "MALE", "female", etc.
+    // Handle any case: "male", "Male", "MALE", "female", etc.
     let finalGender = 'Male'; // Default
     if (gender) {
       const genderLower = String(gender).toLowerCase().trim();
@@ -3131,13 +3186,13 @@ app.post("/register", async (req, res) => {
     try {
       const verificationToken = await EmailVerificationToken.generateToken(user._id);
       const userName = `${firstname} ${lastname}`;
-      
+
       await sendVerificationEmail(
         user.email,
         userName,
         verificationToken.token
       );
-      
+
       res.send({
         message: "User registered successfully. Please check your email to verify your account.",
         userId: user._id.toString(),
@@ -3194,8 +3249,8 @@ app.get("/verify-email", async (req, res) => {
       if (acceptsHtml) {
         return res.redirect(`/verify-email/verify-email.html?token=${encodeURIComponent(token)}&error=invalid`);
       }
-      return res.status(400).send({ 
-        message: "Invalid or expired verification token. Please request a new verification email." 
+      return res.status(400).send({
+        message: "Invalid or expired verification token. Please request a new verification email."
       });
     }
 
@@ -3217,7 +3272,7 @@ app.get("/verify-email", async (req, res) => {
       if (acceptsHtml) {
         return res.redirect(`/verify-email/verify-email.html?token=${encodeURIComponent(token)}&verified=true&already=true`);
       }
-      return res.status(200).send({ 
+      return res.status(200).send({
         message: "Email already verified. You can now log in.",
         alreadyVerified: true
       });
@@ -3232,14 +3287,14 @@ app.get("/verify-email", async (req, res) => {
 
     // Check if request is from browser (has Accept header with text/html)
     const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
-    
+
     if (acceptsHtml) {
       // Redirect to HTML verification page
       return res.redirect(`/verify-email/verify-email.html?token=${encodeURIComponent(token)}&verified=true`);
     }
-    
+
     // Return JSON for API requests
-    res.send({ 
+    res.send({
       message: "Email verified successfully! You can now log in.",
       verified: true
     });
@@ -3297,7 +3352,7 @@ app.post("/resend-verification", async (req, res) => {
       verificationToken.token
     );
 
-    res.send({ 
+    res.send({
       message: "Verification email sent successfully. Please check your inbox.",
       emailSent: true
     });
@@ -3415,7 +3470,7 @@ const verifyMobileToken = async (req, res, next) => {
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
     const user = await User.findById(decoded.userId);
-    
+
     if (!user || !user.status) {
       return res.status(401).json({ message: 'Invalid token' });
     }
@@ -3449,7 +3504,7 @@ const verifyMobileToken = async (req, res, next) => {
  */
 app.post("/auth/mobile-login", async (req, res) => {
   console.log('📱 Mobile login request received:', { email: req.body.email, hasPassword: !!req.body.password });
-  
+
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -3460,7 +3515,7 @@ app.post("/auth/mobile-login", async (req, res) => {
   try {
     // Find user in MongoDB
     const user = await User.findOne({ email: email.toLowerCase(), status: true });
-    
+
     if (!user) {
       console.log('❌ User not found or inactive:', email.toLowerCase());
       return res.status(401).json({ message: "Invalid email or password" });
@@ -3470,7 +3525,7 @@ app.post("/auth/mobile-login", async (req, res) => {
 
     // Compare password
     const isMatch = await user.comparePassword(password);
-    
+
     if (!isMatch) {
       console.log('❌ Password mismatch for:', email);
       return res.status(401).json({ message: "Invalid email or password" });
@@ -3772,7 +3827,7 @@ app.put("/user/profile", verifyMobileToken, async (req, res) => {
 app.get("/user/appointments", verifyMobileToken, async (req, res) => {
   try {
     const userId = req.userId;
-    
+
     // Find patient profile
     const patientProfile = await PatientProfile.findOne({ userId: userId });
     if (!patientProfile) {
@@ -3801,7 +3856,7 @@ app.get("/user/appointments", verifyMobileToken, async (req, res) => {
     const formattedAppointments = appointments.map(apt => {
       const specialtyId = apt.consultationType;
       const specialtyName = getSpecialtyName(specialtyId);
-      
+
       return {
         _id: apt._id.toString(),
         consultationType: apt.consultationType,
@@ -4046,7 +4101,7 @@ const getSpecialtyName = (specialtyId) => {
 app.get("/schedule/:doctorId", async (req, res) => {
   try {
     const doctorId = req.params.doctorId;
-    
+
     // For now, return a default schedule structure
     // You can customize this based on your actual schedule system
     const schedule = {
@@ -4240,9 +4295,9 @@ app.get("/users_update/:id", async (req, res) => {
   try {
     const userId = req.params.id;
 
-    const user = await User.findOne({ 
-      _id: userId, 
-      role: { $ne: 'admin' } 
+    const user = await User.findOne({
+      _id: userId,
+      role: { $ne: 'admin' }
     }).lean();
 
     if (!user) {
@@ -4495,12 +4550,12 @@ app.get("/appointment-count-today", async (req, res) => {
   try {
     const today = new Date();
     const todayStr = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}-${today.getFullYear()}`;
-    
-    const count = await Appointment.countDocuments({ 
+
+    const count = await Appointment.countDocuments({
       status: 'Booked',
       bookingDate: todayStr
     });
-    
+
     res.send({
       message: "Count fetched successfully",
       total_booked_today: count,
@@ -4565,12 +4620,12 @@ app.get("/appointment-count-completed-today", async (req, res) => {
   try {
     const today = new Date();
     const todayStr = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}-${today.getFullYear()}`;
-    
-    const count = await Appointment.countDocuments({ 
+
+    const count = await Appointment.countDocuments({
       status: 'Completed',
       bookingDate: todayStr
     });
-    
+
     res.send({ count });
   } catch (error) {
     console.error("Database error:", error);
@@ -4717,7 +4772,7 @@ app.post("/generateQueueNumber/:id", async (req, res) => {
 
     const today = new Date();
     const todayStr = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}-${today.getFullYear()}`;
-    
+
     // Get latest queue_no for today only
     const latestAppointment = await Appointment.findOne({
       bookingDate: todayStr,
@@ -4771,22 +4826,22 @@ app.post("/generateQueueNumber/:id", async (req, res) => {
 app.get("/getBookingListSearch", async (req, res) => {
   try {
     const { booking_date, status, fullname, consultation_type, role, user_id } = req.query;
-    
+
     // Build MongoDB query
     const query = {};
-    
+
     if (booking_date) {
       query.bookingDate = booking_date;
     }
-    
+
     if (status) {
       query.status = status;
     }
-    
+
     if (consultation_type) {
       query.consultationType = consultation_type;
     }
-    
+
     // Role-based filtering
     if (role === "patient" && user_id) {
       // Find patient profile by user_id
@@ -4798,18 +4853,18 @@ app.get("/getBookingListSearch", async (req, res) => {
         return res.json({ data: [] });
       }
     }
-    
+
     if (role === "doctor" && user_id) {
       query.doctorId = user_id;
       // Show both "Booked" and "In Queue" appointments for doctors
       query.status = { $in: ["Booked", "In Queue"] };
     }
-    
+
     let appointments = await Appointment.find(query)
       .populate('patientId', 'firstname middlename lastname gender age userId')
       .sort({ createdAt: -1 })
       .lean();
-    
+
     // Filter by fullname if provided
     if (fullname) {
       const searchTerm = fullname.toLowerCase();
@@ -4819,7 +4874,7 @@ app.get("/getBookingListSearch", async (req, res) => {
         return name.includes(searchTerm);
       });
     }
-    
+
     // Format results
     const results = appointments.map(appointment => ({
       patient_id: appointment.patientId ? appointment.patientId._id.toString() : '',
@@ -4870,9 +4925,9 @@ app.get("/getBookingListSearch", async (req, res) => {
  */
 app.post("/saveInventoryItem", async (req, res) => {
   try {
-    const { 
-      addItem, 
-      addCategory, 
+    const {
+      addItem,
+      addCategory,
       addUnit,
       addBeginningBalance,
       addAdjustments,
@@ -4881,7 +4936,7 @@ app.post("/saveInventoryItem", async (req, res) => {
       addQtyWasted,
       addMonthsUsage,
       addABL,
-      addPrice 
+      addPrice
     } = req.body;
 
     // Validate required fields
@@ -4890,7 +4945,7 @@ app.post("/saveInventoryItem", async (req, res) => {
     }
 
     // Step 1: Check if item already exists (case-insensitive)
-    const existing = await Inventory.findOne({ 
+    const existing = await Inventory.findOne({
       item: { $regex: new RegExp(`^${addItem}$`, 'i') }
     });
 
@@ -4901,7 +4956,7 @@ app.post("/saveInventoryItem", async (req, res) => {
     // Step 2: Convert category to ObjectId
     let categoryObjectId;
     const mongoose = require('mongoose');
-    
+
     // Map numeric values to category names (updated for new categories)
     const categoryMap = {
       '1': 'Medicines / Pharmaceuticals',
@@ -4910,7 +4965,7 @@ app.post("/saveInventoryItem", async (req, res) => {
       '4': 'Consumables / Disposables',
       '5': 'Contraceptives'
     };
-    
+
     if (mongoose.Types.ObjectId.isValid(addCategory)) {
       const categoryExists = await InventoryCategory.findById(addCategory);
       if (!categoryExists) {
@@ -4943,7 +4998,7 @@ app.post("/saveInventoryItem", async (req, res) => {
     const qtyWasted = parseInt(addQtyWasted) || 0;
     const abl = parseInt(addABL) || 0;
     const endingBalance = actualStock - qtyUsed - qtyWasted;
-    
+
     let status = 'In Stock';
     if (endingBalance <= 0) {
       status = 'Out of Stock';
@@ -4983,20 +5038,20 @@ app.post("/saveInventoryItem", async (req, res) => {
 app.get("/getInventory", async (req, res) => {
   try {
     const { item, status } = req.query;
-    
+
     // Build MongoDB query
     const query = {};
-    
+
     if (status) {
       // Case-insensitive status matching
       query.status = { $regex: new RegExp(`^${status}$`, 'i') };
     }
-    
+
     // Get inventory items with populated category
     let items = await Inventory.find(query)
       .populate('category', 'category')
       .lean();
-    
+
     // Filter by item name or category if provided
     if (item) {
       const searchTerm = item.toLowerCase();
@@ -5006,7 +5061,7 @@ app.get("/getInventory", async (req, res) => {
         return itemName.includes(searchTerm) || categoryName.includes(searchTerm);
       });
     }
-    
+
     // Format results to match expected structure with new fields
     const results = items.map(inv => ({
       id: inv._id.toString(),
@@ -5104,7 +5159,7 @@ app.post("/updateInventory", async (req, res) => {
     // Convert category to ObjectId if needed
     let categoryObjectId;
     const mongoose = require('mongoose');
-    
+
     // Updated category map for new categories
     const categoryMap = {
       '1': 'Medicines / Pharmaceuticals',
@@ -5113,7 +5168,7 @@ app.post("/updateInventory", async (req, res) => {
       '4': 'Consumables / Disposables',
       '5': 'Contraceptives'
     };
-    
+
     if (mongoose.Types.ObjectId.isValid(updateCategory)) {
       const categoryExists = await InventoryCategory.findById(updateCategory);
       if (!categoryExists) {
@@ -5146,7 +5201,7 @@ app.post("/updateInventory", async (req, res) => {
     const qtyWasted = parseInt(updateQtyWasted) || 0;
     const abl = parseInt(updateABL) || 0;
     const endingBalance = actualStock - qtyUsed - qtyWasted;
-    
+
     let status = 'In Stock';
     if (endingBalance <= 0) {
       status = 'Out of Stock';
@@ -5277,7 +5332,7 @@ app.delete("/deleteInventoryItem/:id", async (req, res) => {
 app.post("/seedInventoryData", async (req, res) => {
   try {
     const items = await Inventory.find({});
-    
+
     // Sample data configurations based on item names
     const sampleDataMap = {
       'ointments': { beginning_balance: 200, adjustments: 0, actual_stock: 195, qty_used: 145, qty_wasted: 5, months_usage: 6, abl: 20, price: 200, unit: 'Tube' },
@@ -5306,10 +5361,10 @@ app.post("/seedInventoryData", async (req, res) => {
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const itemNameLower = item.item ? item.item.toLowerCase() : '';
-      
+
       // Check if we have specific sample data for this item
       let sampleData = sampleDataMap[itemNameLower];
-      
+
       if (!sampleData) {
         // Use default sample data based on index
         sampleData = defaultSamples[i % defaultSamples.length];
@@ -5369,7 +5424,7 @@ app.post("/updateInventoryField", async (req, res) => {
 
     // Allowed fields for inline editing
     const allowedFields = ['unit', 'beginning_balance', 'adjustments', 'actual_stock', 'qty_used', 'qty_wasted', 'months_usage', 'abl', 'price'];
-    
+
     if (!allowedFields.includes(field)) {
       return res.status(400).json({ message: "Invalid field" });
     }
@@ -5389,7 +5444,7 @@ app.post("/updateInventoryField", async (req, res) => {
     const qtyWasted = parseFloat(item.qty_wasted) || 0;
     const abl = parseFloat(item.abl) || 0;
     const endingBalance = actualStock - qtyUsed - qtyWasted;
-    
+
     if (endingBalance <= 0) {
       item.status = 'Out of Stock';
     } else if (abl > 0 && endingBalance < abl) {
@@ -5462,8 +5517,8 @@ app.post("/createAccount", async (req, res) => {
     }
 
     res.send({
-      message: role && role.toLowerCase() === "doctor" 
-        ? "Doctor account created successfully" 
+      message: role && role.toLowerCase() === "doctor"
+        ? "Doctor account created successfully"
         : "User created successfully",
       userId: user._id.toString(),
       accountId: user._id.toString(),
@@ -5531,25 +5586,25 @@ app.post("/updateDoctorInfo", async (req, res) => {
     user.birthdate = new Date(birthdate);
     user.age = age || null;
     user.phone = contactNumber || null;
-    
+
     // Update email if provided
     if (emailAddress) {
       // Check if email is already taken by another user
-      const existingUser = await User.findOne({ 
-        email: emailAddress.toLowerCase(), 
-        _id: { $ne: user_id } 
+      const existingUser = await User.findOne({
+        email: emailAddress.toLowerCase(),
+        _id: { $ne: user_id }
       });
       if (existingUser) {
         return res.status(409).json({ message: "Email already in use" });
       }
       user.email = emailAddress.toLowerCase();
     }
-    
+
     await user.save();
 
     // Update or create doctor profile
     let doctorProfile = await DoctorProfile.findOne({ userId: user_id });
-    
+
     if (doctorProfile) {
       doctorProfile.specialty = specialty || null;
       doctorProfile.department = department || '';
@@ -5611,7 +5666,7 @@ app.get("/getPatientsList", async (req, res) => {
 
     // Build MongoDB query
     const query = {};
-    
+
     if (role === "patient" && user_id) {
       query.userId = user_id;
     }
@@ -5627,8 +5682,8 @@ app.get("/getPatientsList", async (req, res) => {
       patients = patients.filter(patient => {
         const fullName = `${patient.firstname || ''} ${patient.middlename || ''} ${patient.lastname || ''}`.toLowerCase();
         return fullName.includes(searchTerm) ||
-               (patient.firstname && patient.firstname.toLowerCase().includes(searchTerm)) ||
-               (patient.lastname && patient.lastname.toLowerCase().includes(searchTerm));
+          (patient.firstname && patient.firstname.toLowerCase().includes(searchTerm)) ||
+          (patient.lastname && patient.lastname.toLowerCase().includes(searchTerm));
       });
     }
 
@@ -5662,19 +5717,19 @@ app.get("/getPatientsList", async (req, res) => {
 app.get("/getDoctorsList", async (req, res) => {
   try {
     const { doctorName, specialtyId } = req.query;
-    
+
     // Build MongoDB query
     const matchQuery = {};
-    
+
     if (specialtyId) {
       matchQuery.specialty = parseInt(specialtyId);
     }
-    
+
     // Get doctor profiles with populated user data
     let doctors = await DoctorProfile.find(matchQuery)
       .populate('userId', 'firstname middlename lastname email')
       .lean();
-    
+
     // Filter by doctor name if provided
     if (doctorName) {
       const searchTerm = doctorName.toLowerCase();
@@ -5683,11 +5738,11 @@ app.get("/getDoctorsList", async (req, res) => {
         if (!user) return false;
         const fullName = `${user.firstname || ''} ${user.middlename || ''} ${user.lastname || ''}`.toLowerCase();
         return fullName.includes(searchTerm) ||
-               (user.firstname && user.firstname.toLowerCase().includes(searchTerm)) ||
-               (user.lastname && user.lastname.toLowerCase().includes(searchTerm));
+          (user.firstname && user.firstname.toLowerCase().includes(searchTerm)) ||
+          (user.lastname && user.lastname.toLowerCase().includes(searchTerm));
       });
     }
-    
+
     // Format results
     const results = doctors.map(doctor => ({
       fullname: doctor.userId ? `${doctor.userId.firstname} ${doctor.userId.lastname}` : '',
@@ -5696,7 +5751,7 @@ app.get("/getDoctorsList", async (req, res) => {
       status: doctor.status,
       id: doctor.userId ? doctor.userId._id.toString() : ''
     }));
-    
+
     res.json({ data: results });
   } catch (error) {
     console.error("Get doctors list error:", error);
@@ -6004,14 +6059,14 @@ app.get("/getPatientInfo", async (req, res) => {
 
     // Find user in MongoDB
     const user = await User.findById(patient_user_id).lean();
-    
+
     if (!user) {
       return res.status(404).json({ message: "Patient not found" });
     }
 
     // Find patient profile
-    const patientProfile = await PatientProfile.findOne({ 
-      userId: patient_user_id 
+    const patientProfile = await PatientProfile.findOne({
+      userId: patient_user_id
     }).lean();
 
     // Format result to match expected structure
@@ -6082,9 +6137,9 @@ app.post("/updatePatientInfo", async (req, res) => {
       const user = await User.findById(user_id);
       if (user) {
         // Check if email is already taken by another user
-        const existingUser = await User.findOne({ 
-          email: email.toLowerCase(), 
-          _id: { $ne: user_id } 
+        const existingUser = await User.findOne({
+          email: email.toLowerCase(),
+          _id: { $ne: user_id }
         });
         if (existingUser) {
           return res.status(409).json({ message: "Email already in use" });
@@ -6096,7 +6151,7 @@ app.post("/updatePatientInfo", async (req, res) => {
 
     // Update or create patient profile
     let patientProfile = await PatientProfile.findOne({ userId: user_id });
-    
+
     if (patientProfile) {
       // Update existing profile
       patientProfile.firstname = firstname;
@@ -6190,7 +6245,7 @@ app.get("/getDoctorsInfo", async (req, res) => {
 
     // Find user in MongoDB
     const user = await User.findById(doctor_user_id).lean();
-    
+
     if (!user) {
       return res.status(404).json({ message: "Doctor not found" });
     }
@@ -6225,7 +6280,7 @@ app.get("/getPatientsToday", async (req, res) => {
   try {
     const today = new Date();
     const todayStr = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}-${today.getFullYear()}`;
-    
+
     const appointments = await Appointment.find({
       bookingDate: todayStr,
       status: 'Booked'
@@ -6319,7 +6374,7 @@ app.get("/getAllPatients", async (req, res) => {
           }
         }
       }
-      
+
       return {
         id: patient._id ? patient._id.toString() : '',
         fullname: `${patient.firstname || ''} ${patient.lastname || ''}`.trim(),
