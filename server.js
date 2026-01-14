@@ -2039,6 +2039,8 @@ const DoctorRecommendation = require('./models/DoctorRecommendation'); // Doctor
 const Inventory = require('./models/Inventory');         // Medical inventory items
 const InventoryCategory = require('./models/InventoryCategory'); // Inventory categories
 const EmailVerificationToken = require('./models/EmailVerificationToken'); // Email verification tokens
+const AuditLog = require('./models/AuditLog'); // Audit logs for user activities
+const DoctorSchedule = require('./models/DoctorSchedule'); // Doctor availability schedules
 
 // Email service for sending verification emails
 const { sendVerificationEmail } = require('./services/emailService');
@@ -2261,6 +2263,17 @@ const requireAdmin = (req, res, next) => {
   }
 
   console.log('✅ [AUTH DEBUG] Authentication successful - admin user:', req.session.email);
+  next();
+};
+
+// Middleware to check if user is admin OR doctor
+const requireDoctorOrAdmin = (req, res, next) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
+  if (req.session.role !== 'admin' && req.session.role !== 'doctor') {
+    return res.status(403).json({ success: false, message: 'Doctor or Admin access required' });
+  }
   next();
 };
 
@@ -2546,7 +2559,7 @@ app.get('/analytics/inventory-forecast', requireAdmin, async (req, res) => {
  * Purpose: Get patient health risk prediction data
  * Access: Admin only
  */
-app.get('/analytics/health-risk-analysis', requireAdmin, async (req, res) => {
+app.get('/analytics/health-risk-analysis', requireDoctorOrAdmin, async (req, res) => {
   try {
     const patients = await PatientProfile.find()
       .populate('userId', 'firstname lastname')
@@ -2855,7 +2868,7 @@ Provide recommendations for inventory management, ordering schedules, and cost o
  * Purpose: Generate AI insights for patient health risk analysis
  * Access: Admin only
  */
-app.post('/analytics/ai/health-risk-insights', requireAdmin, async (req, res) => {
+app.post('/analytics/ai/health-risk-insights', requireDoctorOrAdmin, async (req, res) => {
   try {
     // Get risk analysis data directly (same logic as GET endpoint)
     const patients = await PatientProfile.find().populate('userId', 'firstname lastname').lean();
@@ -2963,6 +2976,125 @@ Provide recommendations for proactive patient care, follow-up scheduling, and pr
       message: 'Failed to generate AI insights',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+});
+
+// ============================================================================
+// SECTION: DOCTOR SCHEDULE API ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /doctor-schedules
+ * Purpose: Get all schedules for a specific doctor
+ */
+app.get("/doctor-schedules", async (req, res) => {
+  try {
+    const { doctorId } = req.query;
+    
+    if (!doctorId) {
+      return res.status(400).json({ message: "Doctor ID is required" });
+    }
+    
+    const schedules = await DoctorSchedule.find({ doctorId })
+      .sort({ scheduleDate: 1 })
+      .lean();
+    
+    res.json({ success: true, data: schedules });
+  } catch (error) {
+    console.error("Get doctor schedules error:", error);
+    return res.status(500).json({ message: "Database error", error: error.message });
+  }
+});
+
+/**
+ * POST /doctor-schedule
+ * Purpose: Create or update a doctor's schedule for a specific date
+ */
+app.post("/doctor-schedule", async (req, res) => {
+  try {
+    const { doctorId, scheduleDate, timeSlots, isAvailable, maxPatients, notes } = req.body;
+    
+    if (!doctorId || !scheduleDate) {
+      return res.status(400).json({ message: "Doctor ID and schedule date are required" });
+    }
+    
+    let schedule = await DoctorSchedule.findOne({ doctorId, scheduleDate });
+    
+    if (schedule) {
+      schedule.timeSlots = timeSlots || schedule.timeSlots;
+      schedule.isAvailable = isAvailable !== undefined ? isAvailable : schedule.isAvailable;
+      schedule.maxPatients = maxPatients || schedule.maxPatients;
+      schedule.notes = notes !== undefined ? notes : schedule.notes;
+      await schedule.save();
+    } else {
+      schedule = new DoctorSchedule({
+        doctorId,
+        scheduleDate,
+        timeSlots: timeSlots || [],
+        isAvailable: isAvailable !== undefined ? isAvailable : true,
+        maxPatients: maxPatients || 10,
+        notes: notes || ''
+      });
+      await schedule.save();
+    }
+    
+    res.json({ success: true, message: "Schedule saved successfully", data: schedule });
+  } catch (error) {
+    console.error("Save doctor schedule error:", error);
+    return res.status(500).json({ message: "Database error", error: error.message });
+  }
+});
+
+// ============================================================================
+// SECTION: AUDIT LOGS API ENDPOINT
+// ============================================================================
+
+/**
+ * GET /audit-logs
+ * Purpose: Get audit logs with optional filters
+ */
+app.get("/audit-logs", async (req, res) => {
+  try {
+    const { action, startDate, endDate, limit = 100 } = req.query;
+    
+    let query = {};
+    
+    if (action && action !== 'all') {
+      query.action = action;
+    }
+    
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        query.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+    
+    const logs = await AuditLog.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .lean();
+    
+    const results = logs.map(log => ({
+      id: log._id.toString(),
+      action: log.action,
+      userName: log.userName,
+      userRole: log.userRole,
+      userEmail: log.userEmail,
+      details: log.details,
+      metadata: log.metadata,
+      createdAt: log.createdAt
+    }));
+    
+    res.json({ success: true, data: results });
+  } catch (error) {
+    console.error("Get audit logs error:", error);
+    return res.status(500).json({ success: false, message: "Database error" });
   }
 });
 

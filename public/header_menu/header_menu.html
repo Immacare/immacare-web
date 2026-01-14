@@ -9,13 +9,14 @@
   <link rel="stylesheet" href="/bootstrap-icons/font/bootstrap-icons.min.css" />
   <style>
     /* Fix nav-pills styling - force ALL non-active nav-links to have transparent background */
-    .bg-dark .nav-pills .nav-item .nav-link {
+    .bg-dark .nav-pills .nav-item .nav-link:not(.active) {
       background-color: transparent !important;
     }
     .bg-dark .nav-pills .nav-item .nav-link.active {
       background-color: #0d6efd !important;
+      color: white !important;
     }
-    .bg-dark .nav-pills .nav-link.text-white {
+    .bg-dark .nav-pills .nav-link.text-white:not(.active) {
       color: rgba(255, 255, 255, 0.85) !important;
       background-color: transparent !important;
     }
@@ -128,7 +129,7 @@
           </a>
         </li>
         <li class="nav-item" id="doctorSchedule">
-          <a href="#" class="nav-link text-white" style="background-color: transparent !important;" onclick="loadPage('../doctor/doctor_schedule.html')">
+          <a href="#" class="nav-link text-white" onclick="loadPage('../doctor/doctor_schedule.html')">
             <span>
               <i class="bi bi-calendar-week me-2"></i>
               My Schedule
@@ -142,7 +143,7 @@
           </a>
         </li>
         <li class="nav-item" id="pos">
-          <a href="#" class="nav-link text-white" style="background-color: transparent !important;" onclick="loadPage('../pos/pos.html')">
+          <a href="#" class="nav-link text-white" onclick="loadPage('../pos/pos.html')">
             <i class="bi bi-cart-check me-2"></i>
             Point of Sale
           </a>
@@ -154,7 +155,7 @@
           </a>
         </li>
         <li class="nav-item" id="doctorAnalytics">
-          <a href="#" class="nav-link text-white" style="background-color: transparent !important;" onclick="loadPage('../analytics/doctor_analytics.html')">
+          <a href="#" class="nav-link text-white" onclick="loadPage('../analytics/doctor_analytics.html')">
             <i class="bi bi-graph-up-arrow me-2"></i>
             Doctor Analytics
           </a>
@@ -166,7 +167,7 @@
           </a>
         </li>
         <li class="nav-item" id="auditLogs">
-          <a href="#" class="nav-link text-white" style="background-color: transparent !important;" onclick="loadPage('../audit_logs/audit_logs.html')">
+          <a href="#" class="nav-link text-white" onclick="loadPage('../audit_logs/audit_logs.html')">
             <i class="bi bi-journal-text me-2"></i>
             Audit Logs
           </a>
