@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Point of Sale - ImmaCare+</title>
+    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css" />
+    <link
+      rel="stylesheet"
+      href="/bootstrap-icons/font/bootstrap-icons.min.css"
+    />
+    <script src="/jquery/jquery.min.js"></script>
+    <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="pos.css" />
+  </head>
+
+  <body>
+    <div class="pos-container">
+      <!-- Left Panel - Products -->
+      <div class="products-panel">
+        <div class="panel-header">
+          <h4 class="mb-0"><i class="bi bi-box-seam me-2"></i>Products</h4>
+          <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input
+              type="text"
+              id="productSearch"
+              class="form-control"
+              placeholder="Search products..."
+              oninput="filterProducts()"
+            />
+          </div>
+        </div>
+
+        <!-- Filters Row -->
+        <div class="filters-row">
+          <div class="filter-group">
+            <label>Category:</label>
+            <select id="categoryFilter" class="form-select form-select-sm" onchange="filterProducts()">
+              <option value="all">All Categories</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Stock Status:</label>
+            <select id="stockFilter" class="form-select form-select-sm" onchange="filterProducts()">
+              <option value="all">All Items</option>
+              <option value="in-stock">In Stock</option>
+              <option value="low">Low Stock</option>
+              <option value="out">Out of Stock</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="products-grid" id="productsGrid">
+          <!-- Products will be loaded here -->
+          <div class="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading products...</p>
+          </div>
+        </div>
+
+        <!-- Stock Summary -->
+        <div class="stock-summary">
+          <div class="summary-item">
+            <span class="summary-label">Total Items:</span>
+            <span class="summary-value" id="totalItems">0</span>
+          </div>
+          <div class="summary-item text-success">
+            <span class="summary-label">In Stock:</span>
+            <span class="summary-value" id="inStockCount">0</span>
+          </div>
+          <div class="summary-item text-warning">
+            <span class="summary-label">Low Stock:</span>
+            <span class="summary-value" id="lowStockCount">0</span>
+          </div>
+          <div class="summary-item text-danger">
+            <span class="summary-label">Out of Stock:</span>
+            <span class="summary-value" id="outOfStockCount">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel - Cart & Checkout -->
+      <div class="cart-panel">
+        <div class="panel-header">
+          <h4 class="mb-0"><i class="bi bi-cart3 me-2"></i>Current Order</h4>
+          <button class="btn btn-outline-danger btn-sm" onclick="clearCart()" title="Clear Cart">
+            <i class="bi bi-trash"></i> Clear
+          </button>
+        </div>
+
+        <!-- Cart Items -->
+        <div class="cart-items" id="cartItems">
+          <div class="empty-cart">
+            <i class="bi bi-cart-x"></i>
+            <p>No items in cart</p>
+            <small>Click on products to add them</small>
+          </div>
+        </div>
+
+        <!-- Cart Summary -->
+        <div class="cart-summary">
+          <div class="summary-row">
+            <span>Subtotal:</span>
+            <span id="subtotal">₱0.00</span>
+          </div>
+          <div class="summary-row">
+            <span>Discount:</span>
+            <div class="discount-input">
+              <input type="number" id="discountPercent" class="form-control form-control-sm" value="0" min="0" max="100" onchange="updateCartTotals()">
+              <span>%</span>
+            </div>
+          </div>
+          <div class="summary-row discount-amount">
+            <span>Discount Amount:</span>
+            <span id="discountAmount">-₱0.00</span>
+          </div>
+          <div class="summary-row total">
+            <span>Total:</span>
+            <span id="grandTotal">₱0.00</span>
+          </div>
+        </div>
+
+        <!-- Payment Section -->
+        <div class="payment-section">
+          <div class="payment-input">
+            <label for="amountPaid">Amount Paid:</label>
+            <div class="input-group">
+              <span class="input-group-text">₱</span>
+              <input type="number" id="amountPaid" class="form-control" placeholder="0.00" oninput="calculateChange()">
+            </div>
+          </div>
+          <div class="change-display">
+            <span>Change:</span>
+            <span id="changeAmount" class="change-value">₱0.00</span>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <button class="btn btn-success btn-lg w-100" onclick="processPayment()" id="checkoutBtn">
+            <i class="bi bi-check-circle me-2"></i>Checkout
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transaction Receipt Modal -->
+    <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><i class="bi bi-receipt me-2"></i>Transaction Complete</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="receipt" id="receiptContent">
+              <!-- Receipt content will be generated here -->
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" onclick="printReceipt()">
+              <i class="bi bi-printer me-2"></i>Print Receipt
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="pos.js"></script>
+  </body>
+</html>

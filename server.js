@@ -2011,6 +2011,9 @@ const crypto = require("crypto");
 // Path utilities for file system operations
 const path = require("path");
 
+// File system module for checking file existence
+const fs = require("fs");
+
 // Body parser middleware to parse JSON and URL-encoded request bodies
 const bodyParser = require("body-parser");
 
@@ -2119,11 +2122,15 @@ const appPages = [
   'doctor',
   'doctors_list',
   'doctors_profile',
+  'doctor_schedule',
+  'pos',
   'inventory',
   'user_access',
   'users_account',
   'header_menu',
   'analytics',
+  'doctor_analytics',
+  'audit_logs',
   'financial_report',
   'home'
 ];
@@ -2132,6 +2139,37 @@ const appPages = [
 cleanUrlPages.forEach(page => {
   app.get(`/${page}`, (req, res) => {
     res.sendFile(path.join(__dirname, "public", page, `${page}.html`));
+  });
+});
+
+// Serve landing page service subpages (2d_echo, ecg, etc.)
+const landingpageServices = [
+  '2d_echo', 'earpiercing', 'ecg', 'ent', 'family_planning', 'hearing_screening',
+  'internal_med', 'laboratory', 'minorsurgery', 'non_stress_test', 'obstetrics_gynecology',
+  'ophthalmology', 'papsmear', 'pediatrics', 'postnatal', 'prenatal', 'surgery',
+  'ultrasound', 'urology', 'vaccination', 'dermatology'
+];
+
+landingpageServices.forEach(service => {
+  app.get(`/landingpage/${service}`, (req, res) => {
+    const filePath = path.join(__dirname, "public", "landingpage", `${service}.html`);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).send('Page not found');
+    }
+  });
+});
+
+// Serve homepage service subpages
+landingpageServices.forEach(service => {
+  app.get(`/homepage/${service}`, (req, res) => {
+    const filePath = path.join(__dirname, "public", "homepage", `${service}.html`);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).send('Page not found');
+    }
   });
 });
 

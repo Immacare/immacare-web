@@ -7,6 +7,22 @@
   <title>Immacare+</title>
   <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css" />
   <link rel="stylesheet" href="/bootstrap-icons/font/bootstrap-icons.min.css" />
+  <style>
+    /* Fix nav-pills styling - force ALL non-active nav-links to have transparent background */
+    .bg-dark .nav-pills .nav-item .nav-link {
+      background-color: transparent !important;
+    }
+    .bg-dark .nav-pills .nav-item .nav-link.active {
+      background-color: #0d6efd !important;
+    }
+    .bg-dark .nav-pills .nav-link.text-white {
+      color: rgba(255, 255, 255, 0.85) !important;
+      background-color: transparent !important;
+    }
+    .bg-dark .nav-pills .nav-link.text-white:hover {
+      color: white !important;
+    }
+  </style>
 
   <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="/jquery/jquery.min.js"></script>
@@ -32,25 +48,25 @@
             Home
           </a>
         </li>
-        <li id="dashboard">
+        <li class="nav-item" id="dashboard">
           <a href="#" class="nav-link text-white" onclick="loadPage('../dashboard/dashboard.html')">
             <i class="bi bi-speedometer2 me-2"></i>
             Dashboard
           </a>
         </li>
-        <li id="bookAppointment">
+        <li class="nav-item" id="bookAppointment">
           <a href="#" class="nav-link text-white" onclick="loadPage('../appointment_booking/appointment_booking.html')">
             <i class="bi bi-calendar2-week me-2"></i>
             Book an Appointment
           </a>
         </li>
-        <li id="appointmentList">
+        <li class="nav-item" id="appointmentList">
           <a href="#" class="nav-link text-white" onclick="loadPage('../appointment_booking/appointment_list.html')">
             <i class="bi bi-calendar2-week me-2"></i>
             Appointment List
           </a>
         </li>
-        <li id="myProfilePatient">
+        <li class="nav-item" id="myProfilePatient">
           <a href="#" class="nav-link text-white" onclick="loadPage('../patient/patient_profile.html')">
             <span>
               <i class="bi bi-person-rolodex me-2"></i>
@@ -58,7 +74,7 @@
             </span>
           </a>
         </li>
-        <li id="patients">
+        <li class="nav-item" id="patients">
           <div class="collapse ps-4" id="patientsSubmenu">
             <ul class="nav flex-column">
               -->
@@ -95,7 +111,7 @@
             </ul>
           </div>
         </li>
-        <li id="doctors">
+        <li class="nav-item" id="doctors">
           <a href="#" class="nav-link text-white" onclick="loadPage('../doctor/doctors_list.html')">
             <span>
               <i class="bi bi-person-vcard me-2"></i>
@@ -103,7 +119,7 @@
             </span>
           </a>
         </li>
-        <li id="myProfileDoctor">
+        <li class="nav-item" id="myProfileDoctor">
           <a href="#" class="nav-link text-white" onclick="loadPage('../doctor/doctors_profile.html')">
             <span>
               <i class="bi bi-person-vcard me-2"></i>
@@ -111,25 +127,51 @@
             </span>
           </a>
         </li>
-        <li id="inventory">
+        <li class="nav-item" id="doctorSchedule">
+          <a href="#" class="nav-link text-white" style="background-color: transparent !important;" onclick="loadPage('../doctor/doctor_schedule.html')">
+            <span>
+              <i class="bi bi-calendar-week me-2"></i>
+              My Schedule
+            </span>
+          </a>
+        </li>
+        <li class="nav-item" id="inventory">
           <a href="#" class="nav-link text-white" onclick="loadPage('../inventory/inventory.html')">
             <i class="bi bi-box-seam me-2"></i>
             Inventory
           </a>
         </li>
-        <li id="analytics">
+        <li class="nav-item" id="pos">
+          <a href="#" class="nav-link text-white" style="background-color: transparent !important;" onclick="loadPage('../pos/pos.html')">
+            <i class="bi bi-cart-check me-2"></i>
+            Point of Sale
+          </a>
+        </li>
+        <li class="nav-item" id="analytics">
           <a href="#" class="nav-link text-white" onclick="loadPage('../analytics/analytics.html')">
             <i class="bi bi-graph-up-arrow me-2"></i>
             Predictive Analytics
           </a>
         </li>
-        <li id="userAccess">
+        <li class="nav-item" id="doctorAnalytics">
+          <a href="#" class="nav-link text-white" style="background-color: transparent !important;" onclick="loadPage('../analytics/doctor_analytics.html')">
+            <i class="bi bi-graph-up-arrow me-2"></i>
+            Doctor Analytics
+          </a>
+        </li>
+        <li class="nav-item" id="userAccess">
           <a href="#" class="nav-link text-white" onclick="loadPage('../user_access/user_access.html')">
             <i class="bi bi-person-circle me-2"></i>
             User Access
           </a>
         </li>
-        <li id="patientList">
+        <li class="nav-item" id="auditLogs">
+          <a href="#" class="nav-link text-white" style="background-color: transparent !important;" onclick="loadPage('../audit_logs/audit_logs.html')">
+            <i class="bi bi-journal-text me-2"></i>
+            Audit Logs
+          </a>
+        </li>
+        <li class="nav-item" id="patientList">
           <a href="#" class="nav-link text-white" onclick="loadPage('../patient_list/patient_list.html')">
             <i class="bi bi-people me-2"></i>
             Patient List

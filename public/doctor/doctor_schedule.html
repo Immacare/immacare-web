@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Schedule - Immacare+</title>
+    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/jquery/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="doctors.css" />
+    <style>
+      .schedule-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        background: #fff;
+      }
+      .schedule-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      .time-slot-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        margin: 3px;
+        border-radius: 20px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .time-slot-badge.selected {
+        background-color: #198754;
+        color: white;
+      }
+      .time-slot-badge.unselected {
+        background-color: #e9ecef;
+        color: #495057;
+      }
+      .time-slot-badge:hover {
+        transform: scale(1.05);
+      }
+      .calendar-day {
+        padding: 10px;
+        text-align: center;
+        border: 1px solid #dee2e6;
+        cursor: pointer;
+        min-height: 80px;
+      }
+      .calendar-day:hover {
+        background-color: #f8f9fa;
+      }
+      .calendar-day.has-schedule {
+        background-color: #d1e7dd;
+      }
+      .calendar-day.selected {
+        background-color: #0d6efd;
+        color: white;
+      }
+      .calendar-day.today {
+        border: 2px solid #ffc107;
+      }
+      .calendar-day.past {
+        background-color: #f8f9fa;
+        color: #adb5bd;
+        cursor: not-allowed;
+      }
+      .calendar-header {
+        background-color: #212529;
+        color: white;
+        padding: 10px;
+        text-align: center;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container-fluid px-4 py-3">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+          <i class="bi bi-calendar-week me-2"></i>My Schedule
+        </h2>
+        <input type="hidden" id="doctorUserId" />
+      </div>
+
+      <div class="row">
+        <!-- Calendar Section -->
+        <div class="col-md-7">
+          <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+              <button class="btn btn-sm btn-light" onclick="previousMonth()">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              <h5 class="mb-0" id="currentMonthYear">December 2025</h5>
+              <button class="btn btn-sm btn-light" onclick="nextMonth()">
+                <i class="bi bi-chevron-right"></i>
+              </button>
+            </div>
+            <div class="card-body p-0">
+              <div class="row g-0">
+                <div class="col calendar-header">Sun</div>
+                <div class="col calendar-header">Mon</div>
+                <div class="col calendar-header">Tue</div>
+                <div class="col calendar-header">Wed</div>
+                <div class="col calendar-header">Thu</div>
+                <div class="col calendar-header">Fri</div>
+                <div class="col calendar-header">Sat</div>
+              </div>
+              <div id="calendarGrid"></div>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div class="card shadow-sm">
+            <div class="card-body">
+              <h6>Legend:</h6>
+              <span class="badge bg-success me-2">Has Schedule</span>
+              <span class="badge bg-primary me-2">Selected</span>
+              <span class="badge bg-warning me-2">Today</span>
+              <span class="badge bg-secondary">Past Date</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule Form Section -->
+        <div class="col-md-5">
+          <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+              <h5 class="mb-0">
+                <i class="bi bi-clock me-2"></i>Set Availability
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="mb-3">
+                <label class="form-label"><strong>Selected Date:</strong></label>
+                <input type="text" class="form-control" id="selectedDate" readonly placeholder="Click a date on the calendar" />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label"><strong>Available Time Slots:</strong></label>
+                <p class="text-muted small">Click to select/deselect time slots</p>
+                <div id="timeSlotsContainer">
+                  <span class="time-slot-badge unselected" data-time="8:00 AM - 9:00 AM">8:00 AM - 9:00 AM</span>
+                  <span class="time-slot-badge unselected" data-time="9:00 AM - 10:00 AM">9:00 AM - 10:00 AM</span>
+                  <span class="time-slot-badge unselected" data-time="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</span>
+                  <span class="time-slot-badge unselected" data-time="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</span>
+                  <span class="time-slot-badge unselected" data-time="12:00 PM - 1:00 PM">12:00 PM - 1:00 PM</span>
+                  <span class="time-slot-badge unselected" data-time="1:00 PM - 2:00 PM">1:00 PM - 2:00 PM</span>
+                  <span class="time-slot-badge unselected" data-time="2:00 PM - 3:00 PM">2:00 PM - 3:00 PM</span>
+                  <span class="time-slot-badge unselected" data-time="3:00 PM - 4:00 PM">3:00 PM - 4:00 PM</span>
+                  <span class="time-slot-badge unselected" data-time="4:00 PM - 5:00 PM">4:00 PM - 5:00 PM</span>
+                </div>
+              </div>
+
+              <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="isAvailable" checked />
+                <label class="form-check-label" for="isAvailable">Available for booking</label>
+              </div>
+
+              <div class="d-grid gap-2">
+                <button class="btn btn-success" onclick="saveSchedule()">
+                  <i class="bi bi-save me-2"></i>Save Schedule
+                </button>
+                <button class="btn btn-outline-danger" onclick="deleteSchedule()" id="deleteBtn" style="display: none;">
+                  <i class="bi bi-trash me-2"></i>Delete Schedule
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="doctor_schedule.js"></script>
+  </body>
+</html>

@@ -12,10 +12,14 @@ const routeMap = {
   '/doctor': '../doctor/doctors_list.html',
   '/doctors_list': '../doctor/doctors_list.html',
   '/doctors_profile': '../doctor/doctors_profile.html',
+  '/doctor_schedule': '../doctor/doctor_schedule.html',
   '/inventory': '../inventory/inventory.html',
+  '/pos': '../pos/pos.html',
   '/user_access': '../user_access/user_access.html',
   '/users_account': '../users_account/users_account.html',
   '/analytics': '../analytics/analytics.html',
+  '/doctor_analytics': '../analytics/doctor_analytics.html',
+  '/audit_logs': '../audit_logs/audit_logs.html',
   '/financial_report': '../financial_report/financial_report.html',
   '/header_menu': '../homepage/homepage.html'
 };
@@ -191,6 +195,18 @@ document.addEventListener("DOMContentLoaded", function () {
         if (inventory) inventory.style.display = "none";
       }
 
+      // POS: show only for admin and staff
+      if (![admin, staff].includes(data.role)) {
+        const pos = document.getElementById("pos");
+        if (pos) pos.style.display = "none";
+      }
+
+      // Audit Logs: show only for admin
+      if (data.role !== admin) {
+        const auditLogs = document.getElementById("auditLogs");
+        if (auditLogs) auditLogs.style.display = "none";
+      }
+
       // Book Appointment: hide for doctor, admin, staff
       if ([doctor, admin, staff].includes(data.role)) {
         const bookAppointment = document.getElementById("bookAppointment");
@@ -207,10 +223,22 @@ document.addEventListener("DOMContentLoaded", function () {
         if (patients) patients.style.display = "none";
       }
 
-      // Hide Analytics if NOT admin only
+      // Hide Analytics (admin version) if NOT admin
       if (data.role !== admin) {
         const analytics = document.getElementById("analytics");
         if (analytics) analytics.style.display = "none";
+      }
+
+      // Hide Doctor Analytics if NOT doctor
+      if (data.role !== doctor) {
+        const doctorAnalytics = document.getElementById("doctorAnalytics");
+        if (doctorAnalytics) doctorAnalytics.style.display = "none";
+      }
+
+      // Hide Doctor Schedule if NOT doctor
+      if (data.role !== doctor) {
+        const doctorSchedule = document.getElementById("doctorSchedule");
+        if (doctorSchedule) doctorSchedule.style.display = "none";
       }
     })
     .catch((error) => {
