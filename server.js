@@ -3231,6 +3231,24 @@ app.post("/login", async (req, res) => {
     req.session.age = user.age;
     req.session.role = user.role;
 
+    // Log successful login to audit log
+    try {
+      console.log("[AUDIT] Logging login for user:", user.email);
+      const auditEntry = await AuditLog.create({
+        action: 'login',
+        userId: user._id,
+        userName: `${user.firstname} ${user.lastname}`,
+        userRole: user.role,
+        userEmail: user.email,
+        details: `User logged in successfully`,
+        ipAddress: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent')
+      });
+      console.log("[AUDIT] Login logged successfully, ID:", auditEntry._id);
+    } catch (auditError) {
+      console.error("[AUDIT] Audit log error:", auditError);
+    }
+
     // Return success response with user information (password excluded)
     res.send({
       message: "Login successful",

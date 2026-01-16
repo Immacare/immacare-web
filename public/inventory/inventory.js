@@ -531,19 +531,139 @@ function discardChanges() {
 }
 
 /**
- * Print the inventory table
+ * Print the inventory table with custom template matching audit logs format
  */
 function printInventory() {
-  if (typeof table !== 'undefined' && table) {
-    printDataTable(
-      table,
-      'Inventory Report',
-      ['item', 'category', 'unit', 'beginning_balance', 'adjustments', 'actual_stock', 'qty_used', 'qty_wasted', 'months_usage', 'abl', 'price', 'status'],
-      ['Item', 'Category', 'Unit', 'Beginning Balance', 'Adjustments', 'Actual Stock', 'Qty Used', 'Qty Wasted', 'Months Usage', 'ABL', 'Price', 'Status']
-    );
-  } else {
+  if (typeof table === 'undefined' || !table) {
     alert('No data to print. Please load the table first.');
+    return;
   }
+
+  const data = table.rows({ search: 'applied' }).data().toArray();
+  
+  if (data.length === 0) {
+    alert('No data to print');
+    return;
+  }
+
+  // Get current user info for print header
+  let userRole = 'Unknown';
+  let userFullName = 'Unknown';
+  
+  try {
+    if (window.parent && window.parent !== window) {
+      const parentUsername = window.parent.document.getElementById('usernameDisplay');
+      const parentRole = window.parent.document.getElementById('role');
+      if (parentUsername && parentUsername.textContent) {
+        userFullName = parentUsername.textContent.trim();
+      }
+      if (parentRole && parentRole.value) {
+        userRole = parentRole.value.charAt(0).toUpperCase() + parentRole.value.slice(1);
+      }
+    }
+  } catch (e) {}
+
+  // Calculate summary stats
+  let inStock = 0, forReorder = 0, outOfStock = 0;
+  data.forEach(row => {
+    const status = row.status || '';
+    if (status === 'In Stock') inStock++;
+    else if (status === 'For Reorder') forReorder++;
+    else if (status === 'Out of Stock') outOfStock++;
+  });
+
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Inventory Report</title>
+      <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 15px; }
+        .header h1 { margin: 0; color: #2c5282; }
+        .header p { margin: 5px 0; }
+        .meta { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+        th { background: #2c5282; color: #fff; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .summary { margin-bottom: 15px; font-size: 12px; }
+        .summary span { margin-right: 30px; }
+        .footer { margin-top: 30px; font-size: 11px; }
+        .signature-line { margin-top: 50px; display: flex; justify-content: space-between; }
+        .signature-box { width: 200px; text-align: center; }
+        .signature-box .line { border-top: 1px solid #333; margin-top: 40px; padding-top: 5px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>IMMACARE CLINIC</h1>
+        <p>Inventory Report</p>
+        <p><strong>Report Period:</strong> All Items (Current Inventory)</p>
+      </div>
+      <div class="meta">
+        <div>
+          <strong>Total Items:</strong> ${data.length}<br><br>
+          <span><strong>In Stock:</strong> ${inStock}</span>
+          <span><strong>For Reorder:</strong> ${forReorder}</span>
+          <span><strong>Out of Stock:</strong> ${outOfStock}</span>
+        </div>
+        <div>
+          <strong>Generated:</strong> ${new Date().toLocaleString()}<br>
+          <strong>Role:</strong> ${userRole}<br>
+          <strong>Full Name:</strong> ${userFullName}
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Category</th>
+            <th>Unit</th>
+            <th>Beginning</th>
+            <th>Adjustments</th>
+            <th>Actual Stock</th>
+            <th>Qty Used</th>
+            <th>Qty Wasted</th>
+            <th>ABL</th>
+            <th>Price</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(row => `
+            <tr>
+              <td>${row.item || ''}</td>
+              <td>${row.category || ''}</td>
+              <td>${row.unit || ''}</td>
+              <td>${row.beginning_balance || 0}</td>
+              <td>${row.adjustments || 0}</td>
+              <td>${row.actual_stock || 0}</td>
+              <td>${row.qty_used || 0}</td>
+              <td>${row.qty_wasted || 0}</td>
+              <td>${row.abl || 0}</td>
+              <td>${row.price || 0}</td>
+              <td>${row.status || ''}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <div class="footer">
+        <div class="signature-line">
+          <div class="signature-box">
+            <div class="line">${userFullName} (${userRole})</div>
+          </div>
+          <div class="signature-box">
+            <div class="line">Signature</div>
+          </div>
+        </div>
+      </div>
+      <script>window.onload = function() { window.print(); }</script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
 }
 
 // Handle inline status change

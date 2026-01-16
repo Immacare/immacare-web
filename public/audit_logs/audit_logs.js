@@ -99,20 +99,23 @@ function renderTable(logs) {
   tbody.empty();
   
   logs.forEach(log => {
-    const dateTime = new Date(log.createdAt).toLocaleString('en-PH', {
+    const logDate = new Date(log.createdAt);
+    const dateTime = logDate.toLocaleString('en-PH', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
+    // Use timestamp for proper sorting
+    const sortValue = logDate.getTime();
     
     const activityBadge = getActivityBadge(log.action);
     const roleBadge = getRoleBadge(log.userRole);
     
     tbody.append(`
       <tr>
-        <td>${dateTime}</td>
+        <td data-order="${sortValue}">${dateTime}</td>
         <td>${activityBadge}</td>
         <td>${escapeHtml(log.userName)}</td>
         <td>${roleBadge}</td>
@@ -122,14 +125,17 @@ function renderTable(logs) {
     `);
   });
   
-  // Initialize DataTable
+  // Initialize DataTable with proper date sorting
   auditTable = $('#auditLogsTable').DataTable({
     order: [[0, 'desc']],
     pageLength: 25,
     language: {
       search: "Search logs:",
       lengthMenu: "Show _MENU_ entries"
-    }
+    },
+    columnDefs: [
+      { type: 'num', targets: 0 }
+    ]
   });
 }
 
