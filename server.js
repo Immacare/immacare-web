@@ -2038,6 +2038,7 @@ const Appointment = require('./models/Appointment');      // Appointment booking
 const DoctorRecommendation = require('./models/DoctorRecommendation'); // Doctor recommendations
 const Inventory = require('./models/Inventory');         // Medical inventory items
 const InventoryCategory = require('./models/InventoryCategory'); // Inventory categories
+const InventoryHistory = require('./models/InventoryHistory'); // Inventory history for tracking stock changes
 const EmailVerificationToken = require('./models/EmailVerificationToken'); // Email verification tokens
 const AuditLog = require('./models/AuditLog'); // Audit logs for user activities
 const DoctorSchedule = require('./models/DoctorSchedule'); // Doctor availability schedules
@@ -5222,6 +5223,21 @@ app.post("/saveInventoryItem", async (req, res) => {
   }
 });
 
+// GET INVENTORY CATEGORIES
+app.get("/getInventoryCategories", async (req, res) => {
+  try {
+    const categories = await InventoryCategory.find({}).lean();
+    const results = categories.map(cat => ({
+      id: cat._id.toString(),
+      category: cat.category
+    }));
+    res.json({ success: true, data: results });
+  } catch (error) {
+    console.error("Get inventory categories error:", error);
+    return res.status(500).json({ success: false, message: "Database error" });
+  }
+});
+
 // GET LIST OF INVENTORY WITH CRITERIA (MongoDB)
 app.get("/getInventory", async (req, res) => {
   try {
@@ -5420,6 +5436,245 @@ app.post("/updateInventory", async (req, res) => {
   } catch (error) {
     console.error("Update inventory error:", error);
     return res.status(500).json({ message: "Inventory update failed", error: error.message });
+  }
+});
+
+// POS - Update inventory stock after sale
+app.post("/pos/updateStock", async (req, res) => {
+  try {
+    const { itemId, quantitySold } = req.body;
+
+    if (!itemId || !quantitySold) {
+      return res.status(400).json({ message: "Item ID and quantity sold are required" });
+    }
+
+    const item = await Inventory.findById(itemId);
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    // Update actual_stock by subtracting the quantity sold
+    const currentStock = item.actual_stock || 0;
+    const newStock = Math.max(0, currentStock - quantitySold);
+    item.actual_stock = newStock;
+
+    // Update qty_used to track total sold
+    item.qty_used = (item.qty_used || 0) + quantitySold;
+
+    // Update legacy quantity field
+    item.quantity = newStock;
+
+    // Recalculate status based on new stock level
+    const qtyWasted = item.qty_wasted || 0;
+    const abl = item.abl || 0;
+    const endingBalance = newStock - qtyWasted;
+
+    if (endingBalance <= 0) {
+      item.status = 'Out of Stock';
+    } else if (abl > 0 && endingBalance < abl) {
+      item.status = 'For Reorder';
+    } else {
+      item.status = 'In Stock';
+    }
+
+    await item.save();
+
+    // Create history entry for this stock change
+    try {
+      const category = await InventoryCategory.findById(item.category);
+      await InventoryHistory.create({
+        inventoryId: item._id,
+        item: item.item,
+        category: category ? category.category : '',
+        unit: item.unit,
+        beginning_balance: item.beginning_balance,
+        adjustments: item.adjustments,
+        actual_stock: newStock,
+        qty_used: item.qty_used,
+        qty_wasted: item.qty_wasted,
+        months_usage: item.months_usage,
+        abl: item.abl,
+        price: item.price,
+        status: item.status,
+        changeType: 'pos_sale',
+        quantityChanged: -quantitySold,
+        snapshotDate: new Date()
+      });
+    } catch (historyError) {
+      console.error("[POS] Failed to create history entry:", historyError);
+    }
+
+    console.log(`[POS] Stock updated for item ${item.item}: ${currentStock} -> ${newStock} (sold: ${quantitySold})`);
+
+    res.json({ 
+      message: "Stock updated successfully",
+      newStock: newStock,
+      status: item.status
+    });
+  } catch (error) {
+    console.error("POS update stock error:", error);
+    return res.status(500).json({ message: "Stock update failed", error: error.message });
+  }
+});
+
+// Get inventory history by date range for reporting
+app.get("/getInventoryHistory", async (req, res) => {
+  try {
+    const { startDate, endDate, month, year } = req.query;
+    
+    let targetDate = null;
+    
+    if (startDate && endDate) {
+      // Use the end date as the target - get latest snapshot on or before this date
+      targetDate = new Date(endDate + 'T23:59:59.999');
+    } else if (month) {
+      // Use provided year or current year, but check if month is in the future
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      const monthNum = parseInt(month);
+      let targetYear = year ? parseInt(year) : currentYear;
+      if (!year && monthNum > currentMonth) {
+        targetYear = currentYear - 1;
+      }
+      // Get end of the selected month
+      targetDate = new Date(targetYear, monthNum, 0, 23, 59, 59, 999);
+    }
+    
+    // Get the latest snapshot for each inventory item ON OR BEFORE the target date
+    const query = targetDate ? { snapshotDate: { $lte: targetDate } } : {};
+    
+    const history = await InventoryHistory.aggregate([
+      { $match: query },
+      { $sort: { snapshotDate: -1 } },
+      { $group: {
+        _id: "$inventoryId",
+        latestSnapshot: { $first: "$$ROOT" }
+      }},
+      { $replaceRoot: { newRoot: "$latestSnapshot" } }
+    ]);
+    
+    const results = history.map(h => ({
+      id: h.inventoryId.toString(),
+      item: h.item,
+      category: h.category,
+      unit: h.unit,
+      beginning_balance: h.beginning_balance,
+      adjustments: h.adjustments,
+      actual_stock: h.actual_stock,
+      qty_used: h.qty_used,
+      qty_wasted: h.qty_wasted,
+      months_usage: h.months_usage,
+      abl: h.abl,
+      price: h.price,
+      status: h.status,
+      snapshotDate: h.snapshotDate
+    }));
+    
+    res.json({ success: true, data: results });
+  } catch (error) {
+    console.error("Get inventory history error:", error);
+    return res.status(500).json({ success: false, message: "Database error" });
+  }
+});
+
+// Create initial history snapshots for all inventory items (run once to establish baseline)
+app.post("/initializeInventoryHistory", async (req, res) => {
+  try {
+    const items = await Inventory.find({}).populate('category', 'category').lean();
+    
+    let createdCount = 0;
+    for (const item of items) {
+      // Check if this item already has a history entry
+      const existingHistory = await InventoryHistory.findOne({ inventoryId: item._id });
+      if (!existingHistory) {
+        await InventoryHistory.create({
+          inventoryId: item._id,
+          item: item.item,
+          category: item.category ? item.category.category : '',
+          unit: item.unit,
+          beginning_balance: item.beginning_balance || 0,
+          adjustments: item.adjustments || 0,
+          actual_stock: item.actual_stock || 0,
+          qty_used: item.qty_used || 0,
+          qty_wasted: item.qty_wasted || 0,
+          months_usage: item.months_usage || 0,
+          abl: item.abl || 0,
+          price: item.price || 0,
+          status: item.status || 'In Stock',
+          changeType: 'initial',
+          quantityChanged: 0,
+          snapshotDate: new Date()
+        });
+        createdCount++;
+      }
+    }
+    
+    res.json({ success: true, message: `Created ${createdCount} initial history snapshots` });
+  } catch (error) {
+    console.error("Initialize inventory history error:", error);
+    return res.status(500).json({ success: false, message: "Database error" });
+  }
+});
+
+// Create sample history data for past months (for testing date-based reports)
+app.post("/seedInventoryHistoryData", async (req, res) => {
+  try {
+    const items = await Inventory.find({}).populate('category', 'category').lean();
+    
+    // Create history entries for past 12 months
+    const now = new Date();
+    let createdCount = 0;
+    
+    for (const item of items) {
+      // Create entries for each month from Jan 2025 to current
+      for (let monthsAgo = 12; monthsAgo >= 0; monthsAgo--) {
+        const snapshotDate = new Date(now);
+        snapshotDate.setMonth(snapshotDate.getMonth() - monthsAgo);
+        snapshotDate.setDate(15); // Middle of month
+        snapshotDate.setHours(12, 0, 0, 0);
+        
+        // Simulate stock changes over time - higher stock in past, decreasing
+        const stockMultiplier = 1 + (monthsAgo * 0.1); // 10% more stock per month ago
+        const simulatedStock = Math.round((item.actual_stock || 10) * stockMultiplier);
+        const simulatedQtyUsed = Math.round((item.qty_used || 0) * (1 - monthsAgo * 0.08));
+        
+        // Check if entry already exists for this item and approximate date
+        const startOfMonth = new Date(snapshotDate.getFullYear(), snapshotDate.getMonth(), 1);
+        const endOfMonth = new Date(snapshotDate.getFullYear(), snapshotDate.getMonth() + 1, 0, 23, 59, 59);
+        
+        const existing = await InventoryHistory.findOne({
+          inventoryId: item._id,
+          snapshotDate: { $gte: startOfMonth, $lte: endOfMonth }
+        });
+        
+        if (!existing) {
+          await InventoryHistory.create({
+            inventoryId: item._id,
+            item: item.item,
+            category: item.category ? item.category.category : '',
+            unit: item.unit,
+            beginning_balance: item.beginning_balance || 0,
+            adjustments: item.adjustments || 0,
+            actual_stock: simulatedStock,
+            qty_used: Math.max(0, simulatedQtyUsed),
+            qty_wasted: item.qty_wasted || 0,
+            months_usage: item.months_usage || 0,
+            abl: item.abl || 0,
+            price: item.price || 0,
+            status: simulatedStock > 0 ? 'In Stock' : 'Out of Stock',
+            changeType: 'initial',
+            quantityChanged: 0,
+            snapshotDate: snapshotDate
+          });
+          createdCount++;
+        }
+      }
+    }
+    
+    res.json({ success: true, message: `Created ${createdCount} historical snapshots for testing` });
+  } catch (error) {
+    console.error("Seed inventory history error:", error);
+    return res.status(500).json({ success: false, message: "Database error" });
   }
 });
 

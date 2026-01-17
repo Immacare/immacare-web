@@ -425,4 +425,79 @@
       </div>
     </div>
   </div>
+
+  <!-- Print Inventory Report Modal -->
+  <div
+    class="modal fade"
+    id="printInventoryModal"
+    tabindex="-1"
+    aria-labelledby="printInventoryModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-md">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="printInventoryModalLabel">
+            <i class="bi bi-printer"></i> Print Inventory Report
+          </h5>
+          <button
+            type="button"
+            class="btn-close btn-close-white"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted">
+            Select a date range to filter the inventory report, or leave blank to print all items.
+          </p>
+          
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="printFromDate" class="form-label">From Date:</label>
+              <input type="date" class="form-control" id="printFromDate" />
+            </div>
+            <div class="col-md-6">
+              <label for="printToDate" class="form-label">To Date:</label>
+              <input type="date" class="form-control" id="printToDate" />
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="printMonth" class="form-label">Or Select Month:</label>
+            <select class="form-select" id="printMonth">
+              <option value="">---------- ----</option>
+              <option value="01">January</option>
+              <option value="02">February</option>
+              <option value="03">March</option>
+              <option value="04">April</option>
+              <option value="05">May</option>
+              <option value="06">June</option>
+              <option value="07">July</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+          </div>
+          
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="printAllItems" checked />
+            <label class="form-check-label" for="printAllItems">
+              Print all current inventory items
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-primary" onclick="executePrintInventory()">
+            <i class="bi bi-printer"></i> Print Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </html>

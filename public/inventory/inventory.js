@@ -531,7 +531,7 @@ function discardChanges() {
 }
 
 /**
- * Print the inventory table with custom template matching audit logs format
+ * Show the print inventory modal
  */
 function printInventory() {
   if (typeof table === 'undefined' || !table) {
@@ -545,6 +545,91 @@ function printInventory() {
     alert('No data to print');
     return;
   }
+
+  // Reset modal fields
+  $('#printFromDate').val('');
+  $('#printToDate').val('');
+  $('#printMonth').val('');
+  $('#printAllItems').prop('checked', true);
+  
+  // Show the modal
+  $('#printInventoryModal').modal('show');
+}
+
+/**
+ * Execute the print based on modal selections
+ */
+function executePrintInventory() {
+  const fromDate = $('#printFromDate').val();
+  const toDate = $('#printToDate').val();
+  const selectedMonth = $('#printMonth').val();
+  const printAll = $('#printAllItems').is(':checked');
+  
+  // If printing all or no date filter, use current data
+  if (printAll || (!fromDate && !toDate && !selectedMonth)) {
+    const data = table.rows({ search: 'applied' }).data().toArray();
+    if (data.length === 0) {
+      alert('No data to print');
+      return;
+    }
+    $('#printInventoryModal').modal('hide');
+    generatePrintReport(data, 'All Items (Current Inventory)');
+    return;
+  }
+  
+  // Build API URL for historical data
+  let url = '/getInventoryHistory?';
+  let reportPeriod = '';
+  
+  if (fromDate && toDate) {
+    url += `startDate=${fromDate}&endDate=${toDate}`;
+    reportPeriod = `${fromDate} to ${toDate}`;
+  } else if (selectedMonth) {
+    url += `month=${selectedMonth}`;
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December'];
+    reportPeriod = `${monthNames[parseInt(selectedMonth) - 1]} ${new Date().getFullYear()}`;
+  }
+  
+  // Fetch historical data from server
+  $.ajax({
+    url: url,
+    method: 'GET',
+    dataType: 'json',
+    success: function(response) {
+      if (response.success && response.data && response.data.length > 0) {
+        $('#printInventoryModal').modal('hide');
+        generatePrintReport(response.data, reportPeriod);
+      } else {
+        // No historical data found - fallback to current data with note
+        const currentData = table.rows({ search: 'applied' }).data().toArray();
+        if (currentData.length > 0) {
+          $('#printInventoryModal').modal('hide');
+          generatePrintReport(currentData, reportPeriod + ' (Current Data)');
+        } else {
+          alert('No data to print');
+        }
+      }
+    },
+    error: function() {
+      // On error, fallback to current data
+      const currentData = table.rows({ search: 'applied' }).data().toArray();
+      if (currentData.length > 0) {
+        $('#printInventoryModal').modal('hide');
+        generatePrintReport(currentData, reportPeriod + ' (Current Data)');
+      } else {
+        alert('No data to print');
+      }
+    }
+  });
+}
+
+/**
+ * Generate and display the print report
+ */
+function generatePrintReport(data, reportPeriod) {
+  // Close the modal
+  $('#printInventoryModal').modal('hide');
 
   // Get current user info for print header
   let userRole = 'Unknown';
@@ -600,7 +685,7 @@ function printInventory() {
       <div class="header">
         <h1>IMMACARE CLINIC</h1>
         <p>Inventory Report</p>
-        <p><strong>Report Period:</strong> All Items (Current Inventory)</p>
+        <p><strong>Report Period:</strong> ${reportPeriod}</p>
       </div>
       <div class="meta">
         <div>

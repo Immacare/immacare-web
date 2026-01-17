@@ -86,7 +86,7 @@ const inventorySchema = new mongoose.Schema({
     default: null
   }
 }, {
-  timestamps: false // No timestamps for inventory
+  timestamps: true // Enable timestamps to track when inventory was last updated
 });
 
 // Indexes
