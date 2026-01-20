@@ -9,18 +9,18 @@
   <link rel="stylesheet" href="/bootstrap-icons/font/bootstrap-icons.min.css" />
   <style>
     /* Fix nav-pills styling - force ALL non-active nav-links to have transparent background */
-    .bg-dark .nav-pills .nav-item .nav-link:not(.active) {
+    .sidebar-custom .nav-pills .nav-item .nav-link:not(.active) {
       background-color: transparent !important;
     }
-    .bg-dark .nav-pills .nav-item .nav-link.active {
+    .sidebar-custom .nav-pills .nav-item .nav-link.active {
       background-color: #0d6efd !important;
       color: white !important;
     }
-    .bg-dark .nav-pills .nav-link.text-white:not(.active) {
+    .sidebar-custom .nav-pills .nav-link.text-white:not(.active) {
       color: rgba(255, 255, 255, 0.85) !important;
       background-color: transparent !important;
     }
-    .bg-dark .nav-pills .nav-link.text-white:hover {
+    .sidebar-custom .nav-pills .nav-link.text-white:hover {
       color: white !important;
     }
   </style>
@@ -32,8 +32,8 @@
 
 <body>
   <div class="d-flex" style="height: 100vh; overflow: hidden">
-    <div class="d-flex flex-column flex-shrink-0 p-3 text-white bg-dark full-height"
-      style="width: 280px; height: 100vh; overflow-y: auto">
+    <div class="d-flex flex-column flex-shrink-0 p-3 text-white full-height sidebar-custom"
+      style="width: 280px; height: 100vh; overflow-y: auto; background-color: #212529;">
       <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none">
         <svg class="bi me-2" width="40" height="32">
           <use xlink:href="#bootstrap"></use>
