@@ -263,7 +263,14 @@ a:hover {
 .requirement {
   opacity: 1;
   transition: opacity 0.5s ease, height 0.5s ease, margin 0.5s ease;
-  color: red;
+}
+
+.requirement.valid {
+  color: green !important;
+}
+
+.requirement.invalid {
+  color: red !important;
 }
 
 .requirement.hidden {
@@ -296,4 +303,24 @@ input[type="text"] {
 
 .form-group.error .error-message {
   display: block;
+}
+
+/* Password requirements styling */
+.password-requirements {
+  margin-left: 10px;
+  font-size: 13px;
+}
+
+.password-requirements .requirement {
+  margin: 2px 0;
+}
+
+.password-match {
+  margin-left: 10px;
+  font-size: 13px;
+}
+
+.input-group.mb-1 {
+  margin: 8px !important;
+  width: calc(100% - 16px);
 }

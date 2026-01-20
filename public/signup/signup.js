@@ -49,6 +49,75 @@ document.addEventListener("DOMContentLoaded", function () {
   setupPasswordToggle(passwordInput, togglePasswordBtn);
   setupPasswordToggle(confirmPasswordInput, toggleConfirmPasswordBtn);
 
+  // --- REALTIME PASSWORD VALIDATION ---
+  const reqLength = document.getElementById('req-length');
+  const reqUppercase = document.getElementById('req-uppercase');
+  const reqNumber = document.getElementById('req-number');
+  const reqSpecial = document.getElementById('req-special');
+  const passwordMatch = document.getElementById('password-match');
+  const passwordRequirements = document.getElementById('password-requirements');
+
+  function updateRequirement(element, isValid, text) {
+    if (isValid) {
+      element.classList.remove('invalid');
+      element.classList.add('valid');
+      element.textContent = '✓ ' + text;
+    } else {
+      element.classList.remove('valid');
+      element.classList.add('invalid');
+      element.textContent = '✗ ' + text;
+    }
+  }
+
+  function validatePasswordRealtime() {
+    const password = passwordInput ? passwordInput.value : '';
+    
+    // Check each requirement
+    updateRequirement(reqLength, password.length >= 8, 'At least 8 characters');
+    updateRequirement(reqUppercase, /[A-Z]/.test(password), 'At least 1 uppercase letter');
+    updateRequirement(reqNumber, /[0-9]/.test(password), 'At least 1 number');
+    updateRequirement(reqSpecial, /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password), 'At least 1 special character');
+    
+    // Also check password match if confirm password has value
+    validatePasswordMatch();
+  }
+
+  function validatePasswordMatch() {
+    const password = passwordInput ? passwordInput.value : '';
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
+    
+    if (confirmPassword.length === 0) {
+      passwordMatch.textContent = '';
+      passwordMatch.classList.remove('valid', 'invalid');
+    } else if (password === confirmPassword) {
+      passwordMatch.textContent = '✓ Passwords match';
+      passwordMatch.classList.remove('invalid');
+      passwordMatch.classList.add('valid');
+    } else {
+      passwordMatch.textContent = '✗ Passwords do not match';
+      passwordMatch.classList.remove('valid');
+      passwordMatch.classList.add('invalid');
+    }
+  }
+
+  // Add event listeners for realtime validation
+  if (passwordInput) {
+    // Show requirements when user focuses on password field
+    passwordInput.addEventListener('focus', function() {
+      if (passwordRequirements) {
+        passwordRequirements.style.display = 'block';
+      }
+    });
+    
+    passwordInput.addEventListener('input', validatePasswordRealtime);
+    passwordInput.addEventListener('keyup', validatePasswordRealtime);
+  }
+  
+  if (confirmPasswordInput) {
+    confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+    confirmPasswordInput.addEventListener('keyup', validatePasswordMatch);
+  }
+
   // --- MAIN FORM SUBMISSION AND VALIDATION ---
   if (signupForm && passwordInput && confirmPasswordInput && phoneInput) {
     signupForm.addEventListener("submit", async (e) => {
