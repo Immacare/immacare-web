@@ -3371,6 +3371,21 @@ app.post("/register", async (req, res) => {
 
     await user.save();
 
+    // Log registration to audit log
+    try {
+      await AuditLog.create({
+        action: 'register',
+        userId: user._id,
+        userName: `${firstname} ${lastname}`,
+        userEmail: email.toLowerCase(),
+        userRole: 'patient',
+        details: `New patient registration: ${firstname} ${lastname}`
+      });
+      console.log("[AUDIT] Logged registration for user:", email);
+    } catch (auditError) {
+      console.error("[AUDIT] Failed to log registration:", auditError);
+    }
+
     // Generate verification token and send verification email
     try {
       const verificationToken = await EmailVerificationToken.generateToken(user._id);
@@ -4141,6 +4156,22 @@ app.post("/user/appointments", verifyMobileToken, async (req, res) => {
 
     await appointment.save();
 
+    // Log booking to audit log
+    try {
+      const user = await User.findById(userId);
+      await AuditLog.create({
+        action: 'booking_created',
+        userId: userId,
+        userName: `${firstName} ${lastName}`,
+        userEmail: user ? user.email : null,
+        userRole: 'patient',
+        details: `Mobile appointment booked for ${formattedDate} at ${time} - ${specialization}`
+      });
+      console.log("[AUDIT] Logged mobile booking for patient:", firstName, lastName);
+    } catch (auditError) {
+      console.error("[AUDIT] Failed to log mobile booking:", auditError);
+    }
+
     res.json({
       message: "Appointment booked successfully",
       appointmentId: appointment._id.toString()
@@ -4685,6 +4716,21 @@ app.post("/book-appointment", async (req, res) => {
     });
 
     await appointment.save();
+
+    // Log booking to audit log
+    try {
+      await AuditLog.create({
+        action: 'booking_created',
+        userId: user_id,
+        userName: `${firstname} ${lastname}`,
+        userEmail: email_address || null,
+        userRole: 'patient',
+        details: `Appointment booked for ${booking_date} at ${booking_time} - ${consultation_type}`
+      });
+      console.log("[AUDIT] Logged booking for patient:", firstname, lastname);
+    } catch (auditError) {
+      console.error("[AUDIT] Failed to log booking:", auditError);
+    }
 
     return res.send({
       message: "Appointment booked successfully",
