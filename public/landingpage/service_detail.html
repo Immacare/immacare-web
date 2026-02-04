@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title id="pageTitle">Service | Clinic Services</title>
+    <link rel="stylesheet" href="landingpage.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      .loading-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 300px;
+        flex-direction: column;
+      }
+      .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .error-container {
+        text-align: center;
+        padding: 50px;
+        color: #dc3545;
+      }
+      .error-container h2 {
+        color: #dc3545;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container" id="serviceContent">
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p style="margin-top: 20px;">Loading service details...</p>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        // Get the service slug from the URL
+        const pathParts = window.location.pathname.split('/');
+        const slug = pathParts[pathParts.length - 1];
+        
+        if (slug) {
+          loadServiceDetails(slug);
+        } else {
+          showError('Service not found');
+        }
+      });
+
+      function loadServiceDetails(slug) {
+        fetch(`/api/landing-services/${slug}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.data) {
+              renderServiceDetails(data.data);
+            } else {
+              showError('Service not found');
+            }
+          })
+          .catch(error => {
+            console.error('Error loading service:', error);
+            showError('Unable to load service details');
+          });
+      }
+
+      function renderServiceDetails(service) {
+        // Update page title
+        document.getElementById('pageTitle').textContent = `${service.title} | Clinic Services`;
+        
+        // Build the HTML content
+        let html = `
+          <h1>${service.title}</h1>
+          <img src="${service.bannerImage}" alt="${service.title}" onerror="this.style.display='none'">
+          <p>${service.description}</p>
+        `;
+
+        // Render sections
+        if (service.sections && service.sections.length > 0) {
+          // Sort sections by order
+          const sortedSections = [...service.sections].sort((a, b) => (a.order || 0) - (b.order || 0));
+          
+          sortedSections.forEach(section => {
+            switch (section.type) {
+              case 'heading':
+                html += `<h2 class="section-title">${section.content}</h2>`;
+                break;
+              case 'paragraph':
+                html += `<p>${section.content}</p>`;
+                break;
+              case 'image':
+                html += `<img src="${section.content}" alt="Section image" onerror="this.style.display='none'">`;
+                break;
+              case 'list':
+                if (section.items && section.items.length > 0) {
+                  html += '<ul>';
+                  section.items.forEach(item => {
+                    html += `<li>${item}</li>`;
+                  });
+                  html += '</ul>';
+                }
+                break;
+              case 'blockquote':
+                html += `<blockquote>${section.content}</blockquote>`;
+                break;
+            }
+          });
+        }
+
+        // Add back link
+        html += `<p><a href="/landingpage">← Back to All Services</a></p>`;
+
+        document.getElementById('serviceContent').innerHTML = html;
+      }
+
+      function showError(message) {
+        document.getElementById('serviceContent').innerHTML = `
+          <div class="error-container">
+            <h2>Oops!</h2>
+            <p>${message}</p>
+            <p><a href="/landingpage">← Back to All Services</a></p>
+          </div>
+        `;
+      }
+    </script>
+  </body>
+</html>

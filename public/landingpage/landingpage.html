@@ -29,149 +29,10 @@
   <div class="carousel-container">
     <button class="carousel-btn left-btn">❮</button>
     <div class="cards-slider" id="cardSlider">
-      <div class="card-item">
+      <!-- Services will be loaded dynamically from the database -->
+      <div class="card-item" id="loadingCard">
         <div class="card">
-          <img src="../assets/images/2decho.jpg" alt="Icon" />
-          <h3>2D Echo</h3>
-          <a href="/landingpage/2d_echo"><button>Learn More →</button></a>
-        </div>
-      </div>
-
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/ear1.png" alt="Icon" />
-          <h3>Ear Piercing</h3>
-          <a href="/landingpage/earpiercing"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/ecg.jpg" alt="Icon" />
-          <h3>ECG</h3>
-          <a href="/landingpage/ecg"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/ENT.jpg" alt="Icon" />
-          <h3>ENT</h3>
-          <a href="/landingpage/ent"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/family_planning.jpg" alt="Icon" />
-          <h3>Family Planning</h3>
-          <a href="/landingpage/family_planning"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/hearscreen.jpg" alt="Icon" />
-          <h3>Hearing Screening</h3>
-          <a href="/landingpage/hearing_screening"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/Internal Medicine.jpg" alt="Icon" />
-          <h3>Internal Medicine</h3>
-          <a href="/landingpage/internal_med"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/lab.jpg" alt="Icon" />
-          <h3>Laboratory</h3>
-          <a href="/landingpage/laboratory"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/minorsurgery.png" alt="Icon" />
-          <h3>Minor Surgery</h3>
-          <a href="/landingpage/minorsurgery"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/nst2.jpg" alt="Icon" />
-          <h3>Non Stress Test</h3>
-          <a href="/landingpage/non_stress_test"><button>Learn More →</button></a>
-        </div>
-      </div>
-
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/Obstetrics and Gynecology.jfif" alt="Icon" />
-          <h3>Obstetrics and Gynecology</h3>
-          <a href="/landingpage/obstetrics_gynecology"><button>Learn More →</button></a>
-        </div>
-      </div>
-
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/Ophthalmology.jfif" alt="Icon" />
-          <h3>Ophthalmology</h3>
-          <a href="/landingpage/ophthalmology"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/papsmear.jpg" alt="Icon" />
-          <h3>Papsmear</h3>
-          <a href="/landingpage/papsmear"><button>Learn More →</button></a>
-        </div>
-      </div>
-
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/Pediatrics.jfif" alt="Icon" />
-          <h3>Pediatrics</h3>
-          <a href="/landingpage/pediatrics"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/postnatal.jpg" alt="Icon" />
-          <h3>Postnatal</h3>
-          <a href="/landingpage/postnatal"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/prenatal.jpg" alt="Icon" />
-          <h3>Prenatal</h3>
-          <a href="/landingpage/prenatal"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/surgery.jpg" alt="Icon" />
-          <h3>Surgery</h3>
-          <a href="/landingpage/surgery"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/ultrasound.jpg" alt="Icon" />
-          <h3>Ultrasound</h3>
-          <a href="/landingpage/ultrasound"><button>Learn More →</button></a>
-        </div>
-      </div>
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/Urology.jpg" alt="Icon" />
-          <h3>Urology</h3>
-          <a href="/landingpage/urology"><button>Learn More →</button></a>
-        </div>
-      </div>
-
-      <div class="card-item">
-        <div class="card">
-          <img src="../assets/images/vaccination.jpg" alt="Icon" />
-          <h3>Vaccination</h3>
-          <a href="/landingpage/vaccination"><button>Learn More →</button></a>
+          <p style="padding: 20px; text-align: center;">Loading services...</p>
         </div>
       </div>
     </div>
@@ -242,7 +103,56 @@
       rightBtn.addEventListener("click", () => {
         slider.scrollBy({ left: scrollAmount, behavior: "smooth" });
       });
+
+      // Load services dynamically from the API
+      loadServices();
     });
+
+    function loadServices() {
+      fetch('/api/landing-services')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.data && data.data.length > 0) {
+            renderServices(data.data);
+          } else {
+            document.getElementById('cardSlider').innerHTML = `
+              <div class="card-item">
+                <div class="card">
+                  <p style="padding: 20px; text-align: center;">No services available</p>
+                </div>
+              </div>
+            `;
+          }
+        })
+        .catch(error => {
+          console.error('Error loading services:', error);
+          document.getElementById('cardSlider').innerHTML = `
+            <div class="card-item">
+              <div class="card">
+                <p style="padding: 20px; text-align: center; color: red;">Failed to load services</p>
+              </div>
+            </div>
+          `;
+        });
+    }
+
+    function renderServices(services) {
+      const slider = document.getElementById('cardSlider');
+      slider.innerHTML = '';
+      
+      services.forEach(service => {
+        const cardHtml = `
+          <div class="card-item">
+            <div class="card">
+              <img src="${service.cardImage}" alt="${service.title}" onerror="this.src='/assets/images/immaculate.png'" />
+              <h3>${service.title}</h3>
+              <a href="/landingpage/${service.slug}"><button>Learn More →</button></a>
+            </div>
+          </div>
+        `;
+        slider.innerHTML += cardHtml;
+      });
+    }
   </script>
 </body>
 

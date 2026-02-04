@@ -1,0 +1,172 @@
+/* Landing Services Admin Page Styles */
+
+body {
+  background-color: #f8f9fa;
+  padding: 20px;
+}
+
+.card {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  font-weight: 600;
+}
+
+/* Table Styles */
+#servicesTable img {
+  max-width: 80px;
+  max-height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+/* Status Badge */
+.badge-active {
+  background-color: #28a745;
+}
+
+.badge-inactive {
+  background-color: #dc3545;
+}
+
+/* Section Card Styles */
+.section-card {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  background-color: #fff;
+}
+
+.section-card .section-header {
+  background-color: #e9ecef;
+  padding: 10px 15px;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: move;
+}
+
+.section-card .section-header .drag-handle {
+  cursor: move;
+  color: #6c757d;
+}
+
+.section-card .section-body {
+  padding: 15px;
+}
+
+.section-card .section-type-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+}
+
+/* Image Preview */
+.image-preview {
+  max-width: 200px;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+}
+
+/* List Items Editor */
+.list-items-container {
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #f8f9fa;
+}
+
+.list-item-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.list-item-row:last-child {
+  margin-bottom: 0;
+}
+
+.list-item-row input {
+  flex: 1;
+}
+
+/* Action Buttons */
+.btn-action {
+  padding: 4px 8px;
+  font-size: 0.875rem;
+}
+
+/* Modal Improvements */
+.modal-xl {
+  max-width: 1000px;
+}
+
+/* Preview Styles */
+#previewContent {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+#previewContent h1 {
+  color: #333;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+}
+
+#previewContent h2 {
+  color: #555;
+  margin-top: 20px;
+}
+
+#previewContent img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin: 15px 0;
+}
+
+#previewContent blockquote {
+  border-left: 4px solid #007bff;
+  padding-left: 15px;
+  margin: 15px 0;
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 0 8px 8px 0;
+}
+
+#previewContent ul {
+  padding-left: 20px;
+}
+
+#previewContent li {
+  margin-bottom: 5px;
+}
+
+/* Drag and Drop Styles */
+.sortable-ghost {
+  opacity: 0.4;
+  background-color: #c8ebfb;
+}
+
+.sortable-chosen {
+  background-color: #f0f8ff;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .modal-xl {
+    max-width: 95%;
+  }
+  
+  .section-card .section-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+}

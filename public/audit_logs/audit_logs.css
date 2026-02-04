@@ -51,6 +51,27 @@ body {
   color: #f57c00;
 }
 
+/* Inventory Transaction Summary Cards */
+.summary-card.sales .summary-icon {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.summary-card.restock .summary-icon {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.summary-card.adjustment .summary-icon {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.summary-card.wastage .summary-icon {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
 .summary-value {
   font-size: 28px;
   font-weight: 700;

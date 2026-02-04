@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Appointments - Immacare</title>
+    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/bootstrap-icons/font/bootstrap-icons.min.css" />
+    <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="/jquery/jquery.min.js"></script>
+    <link rel="stylesheet" href="/datatables.net-dt/css/dataTables.dataTables.css" />
+    <script src="/datatables.net/js/dataTables.js"></script>
+    <script src="/datatables.net/js/dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="patient.css" />
+    <style>
+      .badge-booked { background-color: #0d6efd; color: white; }
+      .badge-completed { background-color: #198754; color: white; }
+      .badge-emergency { background-color: #dc3545; color: white; }
+      .badge-cancelled { background-color: #dc3545; color: white; }
+      .badge-inqueue { background-color: #ffc107; color: #212529; }
+      .nav-tabs .nav-link { color: #495057; }
+      .nav-tabs .nav-link.active { color: #0d6efd; font-weight: 500; }
+      .table th { font-weight: 500; }
+      .labelTag { font-size: 1.1rem; }
+    </style>
+  </head>
+  <body>
+    <div class="card shadow-lg rounded p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Patient Information</h2>
+        <input type="hidden" id="user_id" />
+        <input type="hidden" id="role" />
+      </div>
+
+      <!-- Patient Profile Section -->
+      <div class="row mb-3">
+        <!-- Left side -->
+        <div class="col-md-6 d-flex align-items-center">
+          <label class="col-sm-6 col-form-label labelTag"><strong>Basic Information</strong></label>
+        </div>
+        <!-- Right side -->
+        <div class="col-md-6 d-flex align-items-center">
+          <label class="col-sm-6 col-form-label labelTag"><strong>Contact Information</strong></label>
+        </div>
+      </div>
+
+      <div class="container mt-2">
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="firstname" class="col-sm-4 col-form-label">Firstname:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="firstname" name="firstname" readonly />
+            </div>
+          </div>
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="mobileNum" class="col-sm-4 col-form-label">Mobile Number:</label>
+            <div class="col-sm-8">
+              <input type="tel" class="form-control" id="mobileNum" name="mobileNum" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="middlename" class="col-sm-4 col-form-label">Middlename:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="middlename" name="middlename" readonly />
+            </div>
+          </div>
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="email" class="col-sm-4 col-form-label">Email Address:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="email" name="email" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="lastname" class="col-sm-4 col-form-label">Lastname:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="lastname" name="lastname" readonly />
+            </div>
+          </div>
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="homeAddress" class="col-sm-4 col-form-label">Home Address:</label>
+            <div class="col-sm-8">
+              <textarea class="form-control" id="homeAddress" rows="1" readonly></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="gender" class="col-sm-4 col-form-label">Gender:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="gender" name="gender" readonly />
+            </div>
+          </div>
+          <div class="col-md-6 d-flex align-items-center">
+            <label class="col-sm-6 col-form-label labelTag"><strong>Emergency Contact</strong></label>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="birthdate" class="col-sm-4 col-form-label">Birthdate:</label>
+            <div class="col-sm-8">
+              <input type="date" class="form-control" id="birthdate" name="birthdate" readonly />
+            </div>
+          </div>
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="emergencyName" class="col-sm-4 col-form-label">Name:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="emergencyName" name="emergencyName" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="age" class="col-sm-4 col-form-label">Age:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="age" name="age" readonly />
+            </div>
+          </div>
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="relationship" class="col-sm-4 col-form-label">Relationship:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="relationship" name="relationship" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="civilStatus" class="col-sm-4 col-form-label">Civil Status:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="civilStatus" name="civilStatus" readonly />
+            </div>
+          </div>
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="emergencyMobile" class="col-sm-4 col-form-label">Mobile Number:</label>
+            <div class="col-sm-8">
+              <input type="tel" class="form-control" id="emergencyMobile" name="emergencyMobile" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label class="col-sm-6 col-form-label labelTag"><strong>Medical Information</strong></label>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="bloodType" class="col-sm-4 col-form-label">Blood Type:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="bloodType" name="bloodType" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="allergies" class="col-sm-4 col-form-label">Allergies:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="allergies" name="allergies" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="currentMedications" class="col-sm-4 col-form-label">Current Medications:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="currentMedications" name="currentMedications" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="pastMedicalConditions" class="col-sm-4 col-form-label">Past Medical Conditions:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="pastMedicalConditions" name="pastMedicalConditions" readonly />
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6 d-flex align-items-center">
+            <label for="chronicIllness" class="col-sm-4 col-form-label">Chronic Illness:</label>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" id="chronicIllness" name="chronicIllness" readonly />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr />
+
+      <!-- Tabs for History sections -->
+      <ul class="nav nav-tabs" id="historyTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="consultation-tab" data-bs-toggle="tab" data-bs-target="#consultation-history" type="button" role="tab">
+            <i class="bi bi-clipboard2-pulse me-1"></i>Consultation History
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="appointment-tab" data-bs-toggle="tab" data-bs-target="#appointment-history" type="button" role="tab">
+            <i class="bi bi-calendar-check me-1"></i>Appointment History
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="recommendations-tab" data-bs-toggle="tab" data-bs-target="#recommendations" type="button" role="tab">
+            <i class="bi bi-journal-medical me-1"></i>Recommendations
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="prescriptions-tab" data-bs-toggle="tab" data-bs-target="#prescriptions" type="button" role="tab">
+            <i class="bi bi-capsule me-1"></i>Prescriptions
+          </button>
+        </li>
+      </ul>
+
+      <!-- Tab Content -->
+      <div class="tab-content mt-3" id="historyTabContent">
+        <!-- Consultation History Tab -->
+        <div class="tab-pane fade show active" id="consultation-history" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <label class="mb-0 small">Filter:</label>
+              <input type="date" class="form-control form-control-sm" id="consultationDateFrom" style="width: 140px;">
+              <span class="small">to</span>
+              <input type="date" class="form-control form-control-sm" id="consultationDateTo" style="width: 140px;">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="filterConsultationHistory()">
+                <i class="bi bi-funnel"></i> Apply
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearConsultationFilter()">
+                Clear
+              </button>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="printConsultationHistory()">
+              <i class="bi bi-printer me-1"></i>Print
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table id="consultationTable" class="table table-striped table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>Consultation Date</th>
+                  <th>Consultation Type</th>
+                  <th>Doctor</th>
+                  <th>Need follow up</th>
+                  <th>Consultation Status</th>
+                </tr>
+              </thead>
+              <tbody id="consultationBody">
+              </tbody>
+            </table>
+          </div>
+          <div id="noConsultations" class="text-center text-muted py-4" style="display: none;">
+            <i class="bi bi-journal-x fs-1"></i>
+            <p>No consultation history found.</p>
+          </div>
+        </div>
+
+        <!-- Appointment History Tab -->
+        <div class="tab-pane fade" id="appointment-history" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <label class="mb-0 small">Filter:</label>
+              <input type="date" class="form-control form-control-sm" id="appointmentDateFrom" style="width: 140px;">
+              <span class="small">to</span>
+              <input type="date" class="form-control form-control-sm" id="appointmentDateTo" style="width: 140px;">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="filterAppointmentHistory()">
+                <i class="bi bi-funnel"></i> Apply
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAppointmentFilter()">
+                Clear
+              </button>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="printAppointmentHistory()">
+              <i class="bi bi-printer me-1"></i>Print
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table id="appointmentTable" class="table table-striped table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Consultation Type</th>
+                  <th>Doctor</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="appointmentBody">
+              </tbody>
+            </table>
+          </div>
+          <div id="noAppointments" class="text-center text-muted py-4" style="display: none;">
+            <i class="bi bi-calendar-x fs-1"></i>
+            <p>No appointment history found.</p>
+          </div>
+        </div>
+
+        <!-- Recommendations Tab -->
+        <div class="tab-pane fade" id="recommendations" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <label class="mb-0 small">Filter:</label>
+              <input type="date" class="form-control form-control-sm" id="recommendationsDateFrom" style="width: 140px;">
+              <span class="small">to</span>
+              <input type="date" class="form-control form-control-sm" id="recommendationsDateTo" style="width: 140px;">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="filterRecommendations()">
+                <i class="bi bi-funnel"></i> Apply
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearRecommendationsFilter()">
+                Clear
+              </button>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="printRecommendations()">
+              <i class="bi bi-printer me-1"></i>Print
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table id="recommendationsTable" class="table table-striped table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Doctor</th>
+                  <th>Recommendation</th>
+                  <th>Prescription</th>
+                  <th>Follow Up</th>
+                </tr>
+              </thead>
+              <tbody id="recommendationsBody">
+              </tbody>
+            </table>
+          </div>
+          <div id="noRecommendations" class="text-center text-muted py-4" style="display: none;">
+            <i class="bi bi-clipboard-x fs-1"></i>
+            <p>No recommendations found.</p>
+          </div>
+        </div>
+
+        <!-- Prescriptions Tab -->
+        <div class="tab-pane fade" id="prescriptions" role="tabpanel">
+          <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+              <label class="mb-0 small">Filter:</label>
+              <input type="date" class="form-control form-control-sm" id="prescriptionsDateFrom" style="width: 140px;">
+              <span class="small">to</span>
+              <input type="date" class="form-control form-control-sm" id="prescriptionsDateTo" style="width: 140px;">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="filterPrescriptions()">
+                <i class="bi bi-funnel"></i> Apply
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearPrescriptionsFilter()">
+                Clear
+              </button>
+            </div>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="printPrescriptions()">
+              <i class="bi bi-printer me-1"></i>Print
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table id="prescriptionsTable" class="table table-striped table-bordered table-hover">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Prescribed By</th>
+                  <th>Medicine Name</th>
+                  <th>Dosage</th>
+                  <th>Frequency</th>
+                </tr>
+              </thead>
+              <tbody id="prescriptionsBody">
+              </tbody>
+            </table>
+          </div>
+          <div id="noPrescriptions" class="text-center text-muted py-4" style="display: none;">
+            <i class="bi bi-capsule fs-1"></i>
+            <p>No prescriptions found.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let appointmentTable = null;
+      let consultationTable = null;
+      let recommendationsTable = null;
+      let prescriptionsTable = null;
+      let allConsultations = [];
+      let allAppointments = [];
+      let allRecommendations = [];
+      let allPrescriptions = [];
+
+      $(document).ready(function() {
+        // Get user info from session API
+        getSession();
+        
+        // Load other tabs when clicked
+        $('#appointment-tab').on('shown.bs.tab', function() {
+          if (!appointmentTable) loadAppointmentHistory();
+        });
+        
+        $('#recommendations-tab').on('shown.bs.tab', function() {
+          if (!recommendationsTable) loadRecommendations();
+        });
+
+        $('#prescriptions-tab').on('shown.bs.tab', function() {
+          if (!prescriptionsTable) loadPrescriptions();
+        });
+      });
+
+      // Get session data from server
+      function getSession() {
+        fetch("/homepage", {
+          method: "GET",
+          credentials: "include",
+        })
+          .then((response) => {
+            if (!response.ok) {
+              return response.json().then((err) => {
+                throw new Error(err.message);
+              });
+            }
+            return response.json();
+          })
+          .then((data) => {
+            console.log('[PATIENT_APPOINTMENTS] Session data:', data);
+            $('#user_id').val(data.user_id);
+            $('#role').val(data.role);
+            
+            // Now load patient profile and history
+            loadPatientProfile();
+            loadConsultationHistory();
+          })
+          .catch((error) => {
+            console.error('[PATIENT_APPOINTMENTS] Error getting session:', error);
+          });
+      }
+
+      function loadPatientProfile() {
+        const userId = $('#user_id').val();
+        if (!userId) return;
+
+        $.ajax({
+          url: `/users_update/${userId}`,
+          method: 'GET',
+          success: function(response) {
+            if (response) {
+              $('#firstname').val(response.firstname || '');
+              $('#middlename').val(response.middlename || '');
+              $('#lastname').val(response.lastname || '');
+              $('#gender').val(response.gender || '');
+              $('#birthdate').val(response.birthdate || '');
+              $('#age').val(response.age || '');
+              $('#civilStatus').val(response.civil_status || '');
+              $('#mobileNum').val(response.mobile_number || '');
+              $('#email').val(response.email || '');
+              $('#homeAddress').val(response.home_address || '');
+              $('#emergencyName').val(response.emergency_contact_name || '');
+              $('#relationship').val(response.emergency_contact_relationship || '');
+              $('#emergencyMobile').val(response.emergency_contact_number || '');
+              $('#bloodType').val(response.blood_type || '');
+              $('#allergies').val(response.allergies || '');
+              $('#currentMedications').val(response.current_medications || '');
+              $('#pastMedicalConditions').val(response.past_medical_conditions || '');
+              $('#chronicIllness').val(response.chronic_illness || '');
+            }
+          },
+          error: function(err) {
+            console.error('Error loading patient profile:', err);
+          }
+        });
+      }
+
+      function getStatusBadge(status) {
+        const badges = {
+          'Booked': '<span class="badge badge-booked">Booked</span>',
+          'Completed': '<span class="badge badge-completed">Completed</span>',
+          'Emergency': '<span class="badge badge-emergency">Emergency</span>',
+          'Cancelled': '<span class="badge badge-cancelled">Cancelled</span>',
+          'In Queue': '<span class="badge badge-inqueue">In Queue</span>'
+        };
+        return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+      }
+
+      function loadConsultationHistory() {
+        const userId = $('#user_id').val();
+        if (!userId) return;
+
+        $.ajax({
+          url: `/getPatientConsultationHistory/${userId}`,
+          method: 'GET',
+          success: function(response) {
+            allConsultations = response.data || [];
+            renderConsultationTable(allConsultations);
+          },
+          error: function() {
+            $('#consultationTable').hide();
+            $('#noConsultations').show();
+          }
+        });
+      }
+
+      function renderConsultationTable(data) {
+        const tbody = $('#consultationBody');
+        tbody.empty();
+        
+        if (data && data.length > 0) {
+          $('#consultationTable').show();
+          $('#noConsultations').hide();
+          
+          data.forEach(function(cons) {
+            tbody.append(`
+              <tr>
+                <td>${cons.date || 'N/A'}</td>
+                <td>${cons.consultation_type || 'N/A'}</td>
+                <td>${cons.doctor_name || 'N/A'}</td>
+                <td>${cons.follow_up || 'N/A'}</td>
+                <td>${getStatusBadge(cons.status || 'Completed')}</td>
+              </tr>
+            `);
+          });
+          
+          if (consultationTable) consultationTable.destroy();
+          consultationTable = $('#consultationTable').DataTable({
+            order: [[0, 'desc']],
+            pageLength: 10
+          });
+        } else {
+          $('#consultationTable').hide();
+          $('#noConsultations').show();
+        }
+      }
+
+      function loadAppointmentHistory() {
+        const userId = $('#user_id').val();
+        if (!userId) return;
+
+        $.ajax({
+          url: `/getPatientAppointmentHistory/${userId}`,
+          method: 'GET',
+          success: function(response) {
+            allAppointments = response.data || [];
+            renderAppointmentTable(allAppointments);
+          },
+          error: function() {
+            $('#appointmentTable').hide();
+            $('#noAppointments').show();
+          }
+        });
+      }
+
+      function renderAppointmentTable(data) {
+        const tbody = $('#appointmentBody');
+        tbody.empty();
+        
+        if (data && data.length > 0) {
+          $('#appointmentTable').show();
+          $('#noAppointments').hide();
+          
+          data.forEach(function(apt) {
+            tbody.append(`
+              <tr>
+                <td>${apt.booking_date || 'N/A'}</td>
+                <td>${apt.booking_time || 'N/A'}</td>
+                <td>${apt.consultation_type || 'N/A'}</td>
+                <td>${apt.doctor_name || 'Not Assigned'}</td>
+                <td>${getStatusBadge(apt.status)}</td>
+              </tr>
+            `);
+          });
+          
+          if (appointmentTable) appointmentTable.destroy();
+          appointmentTable = $('#appointmentTable').DataTable({
+            order: [[0, 'desc']],
+            pageLength: 10
+          });
+        } else {
+          $('#appointmentTable').hide();
+          $('#noAppointments').show();
+        }
+      }
+
+      function loadRecommendations() {
+        const userId = $('#user_id').val();
+        if (!userId) return;
+
+        $.ajax({
+          url: `/getPatientRecommendations/${userId}`,
+          method: 'GET',
+          success: function(response) {
+            allRecommendations = response.data || [];
+            renderRecommendationsTable(allRecommendations);
+          },
+          error: function() {
+            $('#recommendationsTable').hide();
+            $('#noRecommendations').show();
+          }
+        });
+      }
+
+      function renderRecommendationsTable(data) {
+        const tbody = $('#recommendationsBody');
+        tbody.empty();
+        
+        if (data && data.length > 0) {
+          $('#recommendationsTable').show();
+          $('#noRecommendations').hide();
+          
+          data.forEach(function(rec) {
+            tbody.append(`
+              <tr>
+                <td>${rec.date || 'N/A'}</td>
+                <td>${rec.doctor_name || 'N/A'}</td>
+                <td>${rec.recommendation || 'N/A'}</td>
+                <td>${rec.prescription || 'N/A'}</td>
+                <td>${rec.follow_up || 'N/A'}</td>
+              </tr>
+            `);
+          });
+          
+          if (recommendationsTable) recommendationsTable.destroy();
+          recommendationsTable = $('#recommendationsTable').DataTable({
+            order: [[0, 'desc']],
+            pageLength: 10
+          });
+        } else {
+          $('#recommendationsTable').hide();
+          $('#noRecommendations').show();
+        }
+      }
+
+      function loadPrescriptions() {
+        const userId = $('#user_id').val();
+        if (!userId) return;
+
+        $.ajax({
+          url: `/getPatientPrescriptions/${userId}`,
+          method: 'GET',
+          success: function(response) {
+            allPrescriptions = response.data || [];
+            renderPrescriptionsTable(allPrescriptions);
+          },
+          error: function() {
+            $('#prescriptionsTable').hide();
+            $('#noPrescriptions').show();
+          }
+        });
+      }
+
+      function renderPrescriptionsTable(data) {
+        const tbody = $('#prescriptionsBody');
+        tbody.empty();
+        
+        if (data && data.length > 0) {
+          $('#prescriptionsTable').show();
+          $('#noPrescriptions').hide();
+          
+          data.forEach(function(pres) {
+            tbody.append(`
+              <tr>
+                <td>${pres.date || 'N/A'}</td>
+                <td>${pres.doctor_name || 'N/A'}</td>
+                <td>${pres.medicine_name || 'N/A'}</td>
+                <td>${pres.dosage || 'N/A'}</td>
+                <td>${pres.frequency || 'N/A'}</td>
+              </tr>
+            `);
+          });
+          
+          if (prescriptionsTable) prescriptionsTable.destroy();
+          prescriptionsTable = $('#prescriptionsTable').DataTable({
+            order: [[0, 'desc']],
+            pageLength: 10
+          });
+        } else {
+          $('#prescriptionsTable').hide();
+          $('#noPrescriptions').show();
+        }
+      }
+
+      // Filter functions
+      function filterConsultationHistory() {
+        const from = $('#consultationDateFrom').val();
+        const to = $('#consultationDateTo').val();
+        const filtered = allConsultations.filter(c => {
+          if (!c.date) return false;
+          const date = c.date;
+          if (from && date < from) return false;
+          if (to && date > to) return false;
+          return true;
+        });
+        if (consultationTable) consultationTable.destroy();
+        consultationTable = null;
+        renderConsultationTable(filtered);
+      }
+
+      function clearConsultationFilter() {
+        $('#consultationDateFrom').val('');
+        $('#consultationDateTo').val('');
+        if (consultationTable) consultationTable.destroy();
+        consultationTable = null;
+        renderConsultationTable(allConsultations);
+      }
+
+      function filterAppointmentHistory() {
+        const from = $('#appointmentDateFrom').val();
+        const to = $('#appointmentDateTo').val();
+        const filtered = allAppointments.filter(a => {
+          if (!a.booking_date) return false;
+          const date = a.booking_date;
+          if (from && date < from) return false;
+          if (to && date > to) return false;
+          return true;
+        });
+        if (appointmentTable) appointmentTable.destroy();
+        appointmentTable = null;
+        renderAppointmentTable(filtered);
+      }
+
+      function clearAppointmentFilter() {
+        $('#appointmentDateFrom').val('');
+        $('#appointmentDateTo').val('');
+        if (appointmentTable) appointmentTable.destroy();
+        appointmentTable = null;
+        renderAppointmentTable(allAppointments);
+      }
+
+      function filterRecommendations() {
+        const from = $('#recommendationsDateFrom').val();
+        const to = $('#recommendationsDateTo').val();
+        const filtered = allRecommendations.filter(r => {
+          if (!r.date) return false;
+          const date = r.date;
+          if (from && date < from) return false;
+          if (to && date > to) return false;
+          return true;
+        });
+        if (recommendationsTable) recommendationsTable.destroy();
+        recommendationsTable = null;
+        renderRecommendationsTable(filtered);
+      }
+
+      function clearRecommendationsFilter() {
+        $('#recommendationsDateFrom').val('');
+        $('#recommendationsDateTo').val('');
+        if (recommendationsTable) recommendationsTable.destroy();
+        recommendationsTable = null;
+        renderRecommendationsTable(allRecommendations);
+      }
+
+      function filterPrescriptions() {
+        const from = $('#prescriptionsDateFrom').val();
+        const to = $('#prescriptionsDateTo').val();
+        const filtered = allPrescriptions.filter(p => {
+          if (!p.date) return false;
+          const date = p.date;
+          if (from && date < from) return false;
+          if (to && date > to) return false;
+          return true;
+        });
+        if (prescriptionsTable) prescriptionsTable.destroy();
+        prescriptionsTable = null;
+        renderPrescriptionsTable(filtered);
+      }
+
+      function clearPrescriptionsFilter() {
+        $('#prescriptionsDateFrom').val('');
+        $('#prescriptionsDateTo').val('');
+        if (prescriptionsTable) prescriptionsTable.destroy();
+        prescriptionsTable = null;
+        renderPrescriptionsTable(allPrescriptions);
+      }
+
+      // Print functions
+      function printConsultationHistory() {
+        window.print();
+      }
+
+      function printAppointmentHistory() {
+        window.print();
+      }
+
+      function printRecommendations() {
+        window.print();
+      }
+
+      function printPrescriptions() {
+        window.print();
+      }
+    </script>
+  </body>
+</html>

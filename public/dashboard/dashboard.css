@@ -9,8 +9,14 @@
   cursor: pointer;
 }
 
-.card-body {
+/* Only apply large font to stat cards at top (first two rows) */
+.row.g-2 .card-body {
   font-size: 70px;
+}
+
+/* Reset font size for other card bodies */
+.card.mt-3 .card-body {
+  font-size: 14px;
 }
 
 .card1body {

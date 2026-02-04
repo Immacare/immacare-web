@@ -16,7 +16,7 @@ const mongoose = require('mongoose');
 const auditLogSchema = new mongoose.Schema({
   action: {
     type: String,
-    enum: ['login', 'register', 'booking_created'],
+    enum: ['login', 'register', 'booking_created', 'create', 'update', 'delete'],
     required: true
   },
   userId: {

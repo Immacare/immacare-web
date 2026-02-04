@@ -2039,9 +2039,11 @@ const DoctorRecommendation = require('./models/DoctorRecommendation'); // Doctor
 const Inventory = require('./models/Inventory');         // Medical inventory items
 const InventoryCategory = require('./models/InventoryCategory'); // Inventory categories
 const InventoryHistory = require('./models/InventoryHistory'); // Inventory history for tracking stock changes
+const InventoryTransaction = require('./models/InventoryTransaction'); // Inventory transaction audit logs
 const EmailVerificationToken = require('./models/EmailVerificationToken'); // Email verification tokens
 const AuditLog = require('./models/AuditLog'); // Audit logs for user activities
 const DoctorSchedule = require('./models/DoctorSchedule'); // Doctor availability schedules
+const LandingService = require('./models/LandingService'); // Landing page services (dynamic content)
 
 // Email service for sending verification emails
 const { sendVerificationEmail } = require('./services/emailService');
@@ -2135,6 +2137,7 @@ const appPages = [
   'doctor_analytics',
   'audit_logs',
   'financial_report',
+  'landing_services',
   'home'
 ];
 
@@ -2142,37 +2145,6 @@ const appPages = [
 cleanUrlPages.forEach(page => {
   app.get(`/${page}`, (req, res) => {
     res.sendFile(path.join(__dirname, "public", page, `${page}.html`));
-  });
-});
-
-// Serve landing page service subpages (2d_echo, ecg, etc.)
-const landingpageServices = [
-  '2d_echo', 'earpiercing', 'ecg', 'ent', 'family_planning', 'hearing_screening',
-  'internal_med', 'laboratory', 'minorsurgery', 'non_stress_test', 'obstetrics_gynecology',
-  'ophthalmology', 'papsmear', 'pediatrics', 'postnatal', 'prenatal', 'surgery',
-  'ultrasound', 'urology', 'vaccination', 'dermatology'
-];
-
-landingpageServices.forEach(service => {
-  app.get(`/landingpage/${service}`, (req, res) => {
-    const filePath = path.join(__dirname, "public", "landingpage", `${service}.html`);
-    if (fs.existsSync(filePath)) {
-      res.sendFile(filePath);
-    } else {
-      res.status(404).send('Page not found');
-    }
-  });
-});
-
-// Serve homepage service subpages
-landingpageServices.forEach(service => {
-  app.get(`/homepage/${service}`, (req, res) => {
-    const filePath = path.join(__dirname, "public", "homepage", `${service}.html`);
-    if (fs.existsSync(filePath)) {
-      res.sendFile(filePath);
-    } else {
-      res.status(404).send('Page not found');
-    }
   });
 });
 
@@ -2223,9 +2195,25 @@ app.use(
 app.use("/jquery", express.static(__dirname + "/node_modules/jquery/dist"));
 
 // ============================================================================
+// SECTION: DYNAMIC LANDING PAGE SERVICE ROUTES (AFTER STATIC FILES)
+// ============================================================================
+// This route handles any service slug and serves the dynamic service_detail.html template
+// IMPORTANT: This must be AFTER static file serving so CSS/JS files are served correctly
+app.get('/landingpage/:slug', (req, res) => {
+  const slug = req.params.slug;
+  
+  // Serve the dynamic service detail template
+  const templatePath = path.join(__dirname, "public", "landingpage", "service_detail.html");
+  if (fs.existsSync(templatePath)) {
+    res.sendFile(templatePath);
+  } else {
+    res.status(404).send('Page not found');
+  }
+});
+
+// ============================================================================
 // SECTION: PREDICTIVE ANALYTICS ENDPOINTS (ADMIN ONLY)
 // ============================================================================
-
 // Import Gemini AI module for analytics insights
 const { generateInsights, getAPIUsageStats, clearCache } = require('./config/gemini');
 
@@ -3096,6 +3084,474 @@ app.get("/audit-logs", async (req, res) => {
   } catch (error) {
     console.error("Get audit logs error:", error);
     return res.status(500).json({ success: false, message: "Database error" });
+  }
+});
+
+/**
+ * GET /api/inventory-transactions
+ * Purpose: Get inventory transactions with filters for audit
+ * Access: Admin only
+ */
+app.get("/api/inventory-transactions", requireAdmin, async (req, res) => {
+  try {
+    const { transactionType, itemId, startDate, endDate, limit = 500, search } = req.query;
+    
+    let query = {};
+    
+    if (transactionType && transactionType !== 'all') {
+      query.transactionType = transactionType;
+    }
+    
+    if (itemId) {
+      query.inventoryId = itemId;
+    }
+    
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) {
+        query.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        query.createdAt.$lte = end;
+      }
+    }
+    
+    if (search) {
+      query.$or = [
+        { itemName: { $regex: search, $options: 'i' } },
+        { notes: { $regex: search, $options: 'i' } },
+        { 'performedBy.userName': { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const transactions = await InventoryTransaction.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .lean();
+    
+    res.json({ success: true, data: transactions });
+  } catch (error) {
+    console.error("Get inventory transactions error:", error);
+    return res.status(500).json({ success: false, message: "Database error" });
+  }
+});
+
+/**
+ * GET /api/inventory-transactions/summary
+ * Purpose: Get summary statistics for inventory transactions
+ * Access: Admin only
+ */
+app.get("/api/inventory-transactions/summary", requireAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    let matchQuery = {};
+    if (startDate || endDate) {
+      matchQuery.createdAt = {};
+      if (startDate) {
+        matchQuery.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        matchQuery.createdAt.$lte = end;
+      }
+    }
+    
+    const summary = await InventoryTransaction.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: '$transactionType',
+          count: { $sum: 1 },
+          totalQuantity: { $sum: { $abs: '$quantityChange' } },
+          totalValue: { $sum: { $abs: '$totalValue' } }
+        }
+      }
+    ]);
+    
+    const topItems = await InventoryTransaction.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: '$inventoryId',
+          itemName: { $first: '$itemName' },
+          transactionCount: { $sum: 1 },
+          totalQuantityMoved: { $sum: { $abs: '$quantityChange' } }
+        }
+      },
+      { $sort: { transactionCount: -1 } },
+      { $limit: 10 }
+    ]);
+    
+    res.json({ 
+      success: true, 
+      data: { byType: summary, topItems: topItems }
+    });
+  } catch (error) {
+    console.error("Get inventory transactions summary error:", error);
+    return res.status(500).json({ success: false, message: "Database error" });
+  }
+});
+
+/**
+ * GET /api/inventory-transactions/item/:itemId
+ * Purpose: Get transaction history for a specific inventory item
+ * Access: Admin only
+ */
+app.get("/api/inventory-transactions/item/:itemId", requireAdmin, async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { limit = 100 } = req.query;
+    
+    const transactions = await InventoryTransaction.find({ inventoryId: itemId })
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .lean();
+    
+    res.json({ success: true, data: transactions });
+  } catch (error) {
+    console.error("Get item transactions error:", error);
+    return res.status(500).json({ success: false, message: "Database error" });
+  }
+});
+
+/**
+ * POST /api/inventory-transactions
+ * Purpose: Manually create an inventory transaction (for adjustments, restocks, etc.)
+ * Access: Admin only
+ */
+app.post("/api/inventory-transactions", requireAdmin, async (req, res) => {
+  try {
+    const { 
+      inventoryId, 
+      transactionType, 
+      quantityChange, 
+      notes,
+      unitPrice 
+    } = req.body;
+    
+    if (!inventoryId || !transactionType || quantityChange === undefined) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields: inventoryId, transactionType, quantityChange' 
+      });
+    }
+    
+    // Get the inventory item
+    const item = await Inventory.findById(inventoryId).populate('category', 'category');
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Inventory item not found' });
+    }
+    
+    const quantityBefore = item.actual_stock || 0;
+    const quantityAfter = quantityBefore + quantityChange;
+    
+    // Update the inventory item
+    item.actual_stock = Math.max(0, quantityAfter);
+    item.quantity = item.actual_stock;
+    
+    // Update status
+    if (item.actual_stock <= 0) {
+      item.status = 'Out of Stock';
+    } else if (item.abl > 0 && item.actual_stock < item.abl) {
+      item.status = 'For Reorder';
+    } else {
+      item.status = 'In Stock';
+    }
+    
+    await item.save();
+    
+    // Create the transaction record
+    const transaction = await InventoryTransaction.create({
+      inventoryId: item._id,
+      itemName: item.item,
+      categoryName: item.category?.category || '',
+      unit: item.unit || '',
+      transactionType,
+      quantityBefore,
+      quantityChange,
+      quantityAfter: item.actual_stock,
+      unitPrice: unitPrice || item.price || 0,
+      totalValue: Math.abs(quantityChange) * (unitPrice || item.price || 0),
+      referenceType: 'manual',
+      performedBy: {
+        userId: req.session.userId,
+        userName: `${req.session.firstname} ${req.session.lastname}`,
+        userRole: req.session.role,
+        userEmail: req.session.email
+      },
+      notes: notes || '',
+      ipAddress: req.ip
+    });
+    
+    res.json({ 
+      success: true, 
+      data: transaction, 
+      message: 'Transaction recorded successfully' 
+    });
+  } catch (error) {
+    console.error("Create inventory transaction error:", error);
+    return res.status(500).json({ success: false, message: "Failed to create transaction" });
+  }
+});
+
+// ============================================================================
+// SECTION: LANDING SERVICES API ENDPOINTS
+// ============================================================================
+// These endpoints manage the dynamic content for the landing page services
+
+/**
+ * GET /api/landing-services
+ * Purpose: Get all active landing services for the public landing page
+ * Access: Public (no authentication required)
+ */
+app.get('/api/landing-services', async (req, res) => {
+  try {
+    const services = await LandingService.find({ isActive: true })
+      .sort({ displayOrder: 1 })
+      .lean();
+    res.json({ success: true, data: services });
+  } catch (error) {
+    console.error('Error fetching landing services:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch services' });
+  }
+});
+
+/**
+ * GET /api/landing-services/:slug
+ * Purpose: Get a single landing service by slug for the detail page
+ * Access: Public (no authentication required)
+ */
+app.get('/api/landing-services/:slug', async (req, res) => {
+  try {
+    const service = await LandingService.findOne({ 
+      slug: req.params.slug,
+      isActive: true 
+    }).lean();
+    
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    
+    res.json({ success: true, data: service });
+  } catch (error) {
+    console.error('Error fetching landing service:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch service' });
+  }
+});
+
+/**
+ * GET /api/admin/landing-services
+ * Purpose: Get all landing services for admin management (including inactive)
+ * Access: Admin only
+ */
+app.get('/api/admin/landing-services', requireAdmin, async (req, res) => {
+  try {
+    const services = await LandingService.find()
+      .sort({ displayOrder: 1 })
+      .lean();
+    res.json({ success: true, data: services });
+  } catch (error) {
+    console.error('Error fetching landing services for admin:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch services' });
+  }
+});
+
+/**
+ * GET /api/admin/landing-services/:id
+ * Purpose: Get a single landing service by ID for editing
+ * Access: Admin only
+ */
+app.get('/api/admin/landing-services/:id', requireAdmin, async (req, res) => {
+  try {
+    const service = await LandingService.findById(req.params.id).lean();
+    
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    
+    res.json({ success: true, data: service });
+  } catch (error) {
+    console.error('Error fetching landing service:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch service' });
+  }
+});
+
+/**
+ * POST /api/admin/landing-services
+ * Purpose: Create a new landing service
+ * Access: Admin only
+ */
+app.post('/api/admin/landing-services', requireAdmin, async (req, res) => {
+  try {
+    const { title, slug, cardImage, bannerImage, description, sections, displayOrder, isActive } = req.body;
+    
+    if (!title || !slug || !cardImage || !bannerImage || !description) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+    
+    const existingService = await LandingService.findOne({ slug: slug.toLowerCase() });
+    if (existingService) {
+      return res.status(400).json({ success: false, message: 'A service with this slug already exists' });
+    }
+    
+    const newService = new LandingService({
+      title,
+      slug: slug.toLowerCase(),
+      cardImage,
+      bannerImage,
+      description,
+      sections: sections || [],
+      displayOrder: displayOrder || 0,
+      isActive: isActive !== undefined ? isActive : true
+    });
+    
+    await newService.save();
+    
+    await AuditLog.create({
+      userId: req.session.userId,
+      userName: `${req.session.firstname} ${req.session.lastname}`,
+      userRole: req.session.role,
+      userEmail: req.session.email,
+      action: 'create',
+      details: `Created landing service: ${title}`,
+      ipAddress: req.ip
+    });
+    
+    res.json({ success: true, data: newService, message: 'Service created successfully' });
+  } catch (error) {
+    console.error('Error creating landing service:', error);
+    res.status(500).json({ success: false, message: 'Failed to create service' });
+  }
+});
+
+/**
+ * PUT /api/admin/landing-services/:id
+ * Purpose: Update an existing landing service
+ * Access: Admin only
+ */
+app.put('/api/admin/landing-services/:id', requireAdmin, async (req, res) => {
+  try {
+    const { title, slug, cardImage, bannerImage, description, sections, displayOrder, isActive } = req.body;
+    
+    const service = await LandingService.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    
+    if (slug && slug.toLowerCase() !== service.slug) {
+      const existingService = await LandingService.findOne({ 
+        slug: slug.toLowerCase(),
+        _id: { $ne: req.params.id }
+      });
+      if (existingService) {
+        return res.status(400).json({ success: false, message: 'A service with this slug already exists' });
+      }
+    }
+    
+    if (title) service.title = title;
+    if (slug) service.slug = slug.toLowerCase();
+    if (cardImage) service.cardImage = cardImage;
+    if (bannerImage) service.bannerImage = bannerImage;
+    if (description) service.description = description;
+    if (sections) {
+      // Clean sections - remove invalid _id fields (like "new_14") from new sections
+      const cleanedSections = sections.map(section => {
+        const cleanSection = { ...section };
+        // If _id starts with "new_" or is not a valid ObjectId, remove it
+        if (cleanSection._id && (typeof cleanSection._id === 'string' && (cleanSection._id.startsWith('new_') || cleanSection._id.length !== 24))) {
+          delete cleanSection._id;
+        }
+        return cleanSection;
+      });
+      service.sections = cleanedSections;
+    }
+    if (displayOrder !== undefined) service.displayOrder = displayOrder;
+    if (isActive !== undefined) service.isActive = isActive;
+    
+    await service.save();
+    
+    await AuditLog.create({
+      userId: req.session.userId,
+      userName: `${req.session.firstname} ${req.session.lastname}`,
+      userRole: req.session.role,
+      userEmail: req.session.email,
+      action: 'update',
+      details: `Updated landing service: ${service.title}`,
+      ipAddress: req.ip
+    });
+    
+    res.json({ success: true, data: service, message: 'Service updated successfully' });
+  } catch (error) {
+    console.error('Error updating landing service:', error);
+    res.status(500).json({ success: false, message: 'Failed to update service' });
+  }
+});
+
+/**
+ * DELETE /api/admin/landing-services/:id
+ * Purpose: Delete a landing service
+ * Access: Admin only
+ */
+app.delete('/api/admin/landing-services/:id', requireAdmin, async (req, res) => {
+  try {
+    const service = await LandingService.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    
+    const serviceTitle = service.title;
+    await LandingService.findByIdAndDelete(req.params.id);
+    
+    await AuditLog.create({
+      userId: req.session.userId,
+      userName: `${req.session.firstname} ${req.session.lastname}`,
+      userRole: req.session.role,
+      userEmail: req.session.email,
+      action: 'delete',
+      details: `Deleted landing service: ${serviceTitle}`,
+      ipAddress: req.ip
+    });
+    
+    res.json({ success: true, message: 'Service deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting landing service:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete service' });
+  }
+});
+
+/**
+ * PUT /api/admin/landing-services/:id/toggle-status
+ * Purpose: Toggle the active status of a landing service
+ * Access: Admin only
+ */
+app.put('/api/admin/landing-services/:id/toggle-status', requireAdmin, async (req, res) => {
+  try {
+    const service = await LandingService.findById(req.params.id);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+    
+    service.isActive = !service.isActive;
+    await service.save();
+    
+    await AuditLog.create({
+      userId: req.session.userId,
+      userName: `${req.session.firstname} ${req.session.lastname}`,
+      userRole: req.session.role,
+      userEmail: req.session.email,
+      action: 'update',
+      details: `${service.isActive ? 'Activated' : 'Deactivated'} landing service: ${service.title}`,
+      ipAddress: req.ip
+    });
+    
+    res.json({ success: true, data: service, message: `Service ${service.isActive ? 'activated' : 'deactivated'} successfully` });
+  } catch (error) {
+    console.error('Error toggling landing service status:', error);
+    res.status(500).json({ success: false, message: 'Failed to toggle service status' });
   }
 });
 
@@ -4536,12 +4992,211 @@ app.get("/users_update/:id", async (req, res) => {
       role: user.role,
       username: user.email,
       status: user.status ? 'Active' : 'Inactive',
+      mobile_number: user.mobileNumber || user.mobile_number || null,
+      age: user.age || null,
+      home_address: user.homeAddress || user.home_address || null,
       updated_date: user.updatedAt ? new Date(user.updatedAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : null
     };
 
     res.json({ data: [result] });
   } catch (error) {
     console.error("Get user error:", error);
+    return res.status(500).json({ message: "Database error" });
+  }
+});
+
+/**
+ * POST /togglePatientStatus
+ * Purpose: Enable or disable a patient account
+ */
+app.post("/togglePatientStatus", async (req, res) => {
+  try {
+    const { user_id, status } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const user = await User.findById(user_id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.status = status;
+    user.updatedAt = new Date();
+    await user.save();
+
+    res.json({ message: `Account ${status ? 'enabled' : 'disabled'} successfully` });
+  } catch (error) {
+    console.error("Toggle patient status error:", error);
+    return res.status(500).json({ message: "Failed to update account status" });
+  }
+});
+
+/**
+ * GET /getPatientAppointmentHistory/:userId
+ * Purpose: Get appointment history for a specific patient
+ */
+app.get("/getPatientAppointmentHistory/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // First find the PatientProfile by userId
+    const patientProfile = await PatientProfile.findOne({ userId: userId }).lean();
+    if (!patientProfile) {
+      return res.json({ data: [] });
+    }
+
+    const appointments = await Appointment.find({ patientId: patientProfile._id })
+      .populate('doctorId', 'firstname lastname')
+      .sort({ bookingDate: -1 })
+      .lean();
+
+    const results = appointments.map(apt => ({
+      booking_date: apt.bookingDate || 'N/A',
+      booking_time: apt.bookingTime || 'N/A',
+      consultation_type: apt.consultationType || 'N/A',
+      doctor_name: apt.doctorId ? `Dr. ${apt.doctorId.firstname} ${apt.doctorId.lastname}` : 'Not Assigned',
+      status: apt.status || 'N/A'
+    }));
+
+    res.json({ data: results });
+  } catch (error) {
+    console.error("Get patient appointment history error:", error);
+    return res.status(500).json({ message: "Database error" });
+  }
+});
+
+/**
+ * GET /getPatientRecommendations/:userId
+ * Purpose: Get recommendations for a specific patient
+ */
+app.get("/getPatientRecommendations/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // First find the PatientProfile by userId
+    const patientProfile = await PatientProfile.findOne({ userId: userId }).lean();
+    if (!patientProfile) {
+      return res.json({ data: [] });
+    }
+
+    // Get appointments with recommendations
+    const appointments = await Appointment.find({ 
+      patientId: patientProfile._id,
+      recommendation: { $exists: true, $ne: '' }
+    })
+      .populate('doctorId', 'firstname lastname')
+        .sort({ bookingDate: -1 })
+        .lean();
+
+      const results = appointments.map(apt => ({
+        date: apt.bookingDate || 'N/A',
+        doctor_name: apt.doctorId ? `Dr. ${apt.doctorId.firstname} ${apt.doctorId.lastname}` : 'N/A',
+        recommendation: apt.recommendation || 'N/A',
+        prescription: apt.prescription || 'N/A',
+        follow_up: apt.followUp || 'N/A'
+      }));
+
+      res.json({ data: results });
+    } catch (error) {
+      console.error("Get patient recommendations error:", error);
+      return res.status(500).json({ message: "Database error" });
+    }
+  });
+
+  /**
+   * GET /getPatientConsultationHistory/:userId
+   * Purpose: Get consultation history for a specific patient (completed appointments)
+   */
+  app.get("/getPatientConsultationHistory/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      const patientProfile = await PatientProfile.findOne({ userId: userId }).lean();
+      if (!patientProfile) {
+        return res.json({ data: [] });
+      }
+
+      const appointments = await Appointment.find({ 
+        patientId: patientProfile._id,
+        status: 'Completed'
+      })
+        .populate('doctorId', 'firstname lastname')
+        .sort({ bookingDate: -1 })
+        .lean();
+
+      const results = appointments.map(apt => ({
+        date: apt.bookingDate || 'N/A',
+        consultation_type: apt.consultationType || 'N/A',
+        doctor_name: apt.doctorId ? `Dr. ${apt.doctorId.firstname} ${apt.doctorId.lastname}` : 'N/A',
+        follow_up: apt.followUp || 'N/A',
+        status: apt.status || 'Completed'
+      }));
+
+      res.json({ data: results });
+    } catch (error) {
+      console.error("Get patient consultation history error:", error);
+      return res.status(500).json({ message: "Database error" });
+    }
+  });
+
+  /**
+   * GET /getPatientPrescriptions/:userId
+   * Purpose: Get prescriptions for a specific patient
+   */
+  app.get("/getPatientPrescriptions/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const patientProfile = await PatientProfile.findOne({ userId: userId }).lean();
+    if (!patientProfile) {
+      return res.json({ data: [] });
+    }
+
+    const appointments = await Appointment.find({ 
+      patientId: patientProfile._id,
+      prescription: { $exists: true, $ne: '' }
+    })
+      .populate('doctorId', 'firstname lastname')
+      .sort({ bookingDate: -1 })
+      .lean();
+
+    const results = [];
+    
+    appointments.forEach(apt => {
+      // Parse prescription if it's a JSON string (array of medicines)
+      let prescriptions = [];
+      try {
+        if (apt.prescription) {
+          const parsed = JSON.parse(apt.prescription);
+          if (Array.isArray(parsed)) {
+            prescriptions = parsed;
+          } else {
+            prescriptions = [{ medicine_name: apt.prescription, dosage: '', frequency: '' }];
+          }
+        }
+      } catch (e) {
+        prescriptions = [{ medicine_name: apt.prescription, dosage: '', frequency: '' }];
+      }
+
+      const doctorName = apt.doctorId ? `Dr. ${apt.doctorId.firstname} ${apt.doctorId.lastname}` : 'N/A';
+      const date = apt.bookingDate || 'N/A';
+
+      prescriptions.forEach(pres => {
+        results.push({
+          date: date,
+          doctor_name: doctorName,
+          medicine_name: pres.medicine_name || pres.medicineName || 'N/A',
+          dosage: pres.dosage || 'N/A',
+          frequency: pres.frequency || 'N/A'
+        });
+      });
+    });
+
+    res.json({ data: results });
+  } catch (error) {
+    console.error("Get patient prescriptions error:", error);
     return res.status(500).json({ message: "Database error" });
   }
 });
@@ -5459,6 +6114,10 @@ app.post("/updateInventory", async (req, res) => {
       status = 'For Reorder';
     }
 
+    // Store previous values for transaction logging
+    const previousStock = item.actual_stock || 0;
+    const previousAdjustments = item.adjustments || 0;
+
     // Update item with all new fields
     item.item = updateItemName;
     item.category = categoryObjectId;
@@ -5477,6 +6136,63 @@ app.post("/updateInventory", async (req, res) => {
     item.averageQuantity = abl || null;
 
     await item.save();
+
+    // ALWAYS Log inventory transaction for ANY update
+    const stockChange = actualStock - previousStock;
+    const adjustmentChange = (parseInt(updateAdjustments) || 0) - previousAdjustments;
+
+    console.log(`[INVENTORY] ========= UPDATE INVENTORY ENDPOINT HIT =========`);
+    console.log(`[INVENTORY] Item: ${updateItemName}, Previous Stock: ${previousStock}, New Stock: ${actualStock}, Change: ${stockChange}`);
+
+    // Always log the transaction, regardless of what changed
+    {
+      try {
+        const category = await InventoryCategory.findById(categoryObjectId);
+        const categoryName = category ? category.category : '';
+
+        // Determine transaction type based on changes
+        let transactionType = 'adjustment';
+        let notes = '';
+
+        if (stockChange > 0) {
+          transactionType = 'restock';
+          notes = `Inventory restock: +${stockChange} units`;
+        } else if (stockChange < 0) {
+          transactionType = 'adjustment';
+          notes = `Inventory adjustment: ${stockChange} units`;
+        } else if (adjustmentChange !== 0) {
+          transactionType = 'adjustment';
+          notes = `Adjustment field changed by ${adjustmentChange}`;
+        }
+
+        await InventoryTransaction.create({
+          inventoryId: item._id,
+          itemName: updateItemName,
+          categoryName: categoryName,
+          unit: updateUnit || '',
+          transactionType: transactionType,
+          quantityBefore: previousStock,
+          quantityChange: stockChange,
+          quantityAfter: actualStock,
+          unitPrice: updatePrice ? parseFloat(updatePrice) : 0,
+          totalValue: Math.abs(stockChange) * (updatePrice ? parseFloat(updatePrice) : 0),
+          referenceType: 'manual',
+          performedBy: {
+            userId: req.session?.userId,
+            userName: req.session?.firstname && req.session?.lastname
+              ? `${req.session.firstname} ${req.session.lastname}`
+              : 'Staff',
+            userRole: req.session?.role || 'staff',
+            userEmail: req.session?.email || ''
+          },
+          notes: notes,
+          ipAddress: req.ip
+        });
+        console.log(`[INVENTORY] Transaction logged: ${transactionType} for ${updateItemName}`);
+      } catch (txError) {
+        console.error("[INVENTORY] Failed to log transaction:", txError);
+      }
+    }
 
     res.json({ message: "Inventory updated successfully" });
   } catch (error) {
@@ -5528,10 +6244,13 @@ app.post("/pos/updateStock", async (req, res) => {
     // Create history entry for this stock change
     try {
       const category = await InventoryCategory.findById(item.category);
+      const categoryName = category ? category.category : '';
+
+      // Create legacy InventoryHistory entry
       await InventoryHistory.create({
         inventoryId: item._id,
         item: item.item,
-        category: category ? category.category : '',
+        category: categoryName,
         unit: item.unit,
         beginning_balance: item.beginning_balance,
         adjustments: item.adjustments,
@@ -5546,13 +6265,38 @@ app.post("/pos/updateStock", async (req, res) => {
         quantityChanged: -quantitySold,
         snapshotDate: new Date()
       });
+
+      // Create detailed InventoryTransaction for audit trail
+      await InventoryTransaction.create({
+        inventoryId: item._id,
+        itemName: item.item,
+        categoryName: categoryName,
+        unit: item.unit || '',
+        transactionType: 'sale',
+        quantityBefore: currentStock,
+        quantityChange: -quantitySold,
+        quantityAfter: newStock,
+        unitPrice: item.price || 0,
+        totalValue: quantitySold * (item.price || 0),
+        referenceType: 'pos_transaction',
+        performedBy: {
+          userId: req.session?.userId,
+          userName: req.session?.firstname && req.session?.lastname
+            ? `${req.session.firstname} ${req.session.lastname}`
+            : 'POS User',
+          userRole: req.session?.role || 'staff',
+          userEmail: req.session?.email || ''
+        },
+        notes: `POS Sale: ${quantitySold} units`,
+        ipAddress: req.ip
+      });
     } catch (historyError) {
-      console.error("[POS] Failed to create history entry:", historyError);
+      console.error("[POS] Failed to create history/transaction entry:", historyError);
     }
 
     console.log(`[POS] Stock updated for item ${item.item}: ${currentStock} -> ${newStock} (sold: ${quantitySold})`);
 
-    res.json({ 
+    res.json({
       message: "Stock updated successfully",
       newStock: newStock,
       status: item.status
@@ -5899,14 +6643,18 @@ app.post("/seedInventoryData", async (req, res) => {
 
 // Update single inventory field inline
 app.post("/updateInventoryField", async (req, res) => {
+  console.log("[INVENTORY FIELD] ========= ENDPOINT HIT =========");
+  console.log("[INVENTORY FIELD] Request body:", req.body);
   try {
     const { id, field, value } = req.body;
+    console.log("[INVENTORY FIELD] Parsed - id:", id, "field:", field, "value:", value);
 
     if (!id || !field) {
+      console.log("[INVENTORY FIELD] Missing id or field");
       return res.status(400).json({ message: "Item ID and field are required" });
     }
 
-    const item = await Inventory.findById(id);
+    const item = await Inventory.findById(id).populate('category', 'category');
     if (!item) {
       return res.status(404).json({ message: "Item not found" });
     }
@@ -5918,13 +6666,21 @@ app.post("/updateInventoryField", async (req, res) => {
       return res.status(400).json({ message: "Invalid field" });
     }
 
+    // Store previous value for logging
+    const previousValue = item[field];
+    const previousStock = item.actual_stock || 0;
+
     // Update the field
+    let newValue;
     if (field === 'unit') {
-      item[field] = value || null;
+      newValue = value || null;
+      item[field] = newValue;
     } else if (field === 'price') {
-      item[field] = value ? parseFloat(value) : null;
+      newValue = value ? parseFloat(value) : null;
+      item[field] = newValue;
     } else {
-      item[field] = parseInt(value) || 0;
+      newValue = parseInt(value) || 0;
+      item[field] = newValue;
     }
 
     // Recalculate status based on new values
@@ -5947,6 +6703,53 @@ app.post("/updateInventoryField", async (req, res) => {
     item.averageQuantity = abl || null;
 
     await item.save();
+
+    // Log the transaction
+    try {
+      const categoryName = item.category ? item.category.category : '';
+      const stockChange = (field === 'actual_stock') ? (newValue - previousStock) : 0;
+      
+      // Determine transaction type
+      let transactionType = 'adjustment';
+      let notes = `Field "${field}" changed from ${previousValue} to ${newValue}`;
+      
+      if (field === 'actual_stock') {
+        if (stockChange > 0) {
+          transactionType = 'restock';
+          notes = `Inventory restock: +${stockChange} units (inline edit)`;
+        } else if (stockChange < 0) {
+          transactionType = 'adjustment';
+          notes = `Inventory adjustment: ${stockChange} units (inline edit)`;
+        }
+      }
+
+      await InventoryTransaction.create({
+        inventoryId: item._id,
+        itemName: item.item,
+        categoryName: categoryName,
+        unit: item.unit || '',
+        transactionType: transactionType,
+        quantityBefore: previousStock,
+        quantityChange: stockChange,
+        quantityAfter: actualStock,
+        unitPrice: item.price || 0,
+        totalValue: Math.abs(stockChange) * (item.price || 0),
+        referenceType: 'manual',
+        performedBy: {
+          userId: req.session?.userId,
+          userName: req.session?.firstname && req.session?.lastname
+            ? `${req.session.firstname} ${req.session.lastname}`
+            : 'Staff',
+          userRole: req.session?.role || 'staff',
+          userEmail: req.session?.email || ''
+        },
+        notes: notes,
+        ipAddress: req.ip
+      });
+      console.log(`[INVENTORY] Field update logged: ${field} for ${item.item}`);
+    } catch (txError) {
+      console.error("[INVENTORY] Failed to log field update transaction:", txError);
+    }
 
     res.json({ message: "Field updated successfully" });
   } catch (error) {

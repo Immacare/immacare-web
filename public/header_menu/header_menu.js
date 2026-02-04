@@ -6,6 +6,7 @@ const routeMap = {
   '/home': '../homepage/homepage.html',
   '/appointment_booking': '../appointment_booking/appointment_booking.html',
   '/appointment_list': '../appointment_booking/appointment_list.html',
+  '/patient_appointments': '../patient/patient_appointments.html',
   '/patient': '../patient/patient_profile.html',
   '/patient_profile': '../patient/patient_profile.html',
   '/patient_list': '../patient_list/patient_list.html',
@@ -21,6 +22,7 @@ const routeMap = {
   '/doctor_analytics': '../analytics/doctor_analytics.html',
   '/audit_logs': '../audit_logs/audit_logs.html',
   '/financial_report': '../financial_report/financial_report.html',
+  '/landing_services': '../landing_services/landing_services.html',
   '/header_menu': '../homepage/homepage.html'
 };
 
@@ -227,6 +229,12 @@ document.addEventListener("DOMContentLoaded", function () {
       if (data.role !== admin) {
         const analytics = document.getElementById("analytics");
         if (analytics) analytics.style.display = "none";
+      }
+
+      // Hide Landing Services if NOT admin
+      if (data.role !== admin) {
+        const landingServices = document.getElementById("landingServices");
+        if (landingServices) landingServices.style.display = "none";
       }
 
       // Hide Doctor Analytics if NOT doctor

@@ -184,6 +184,9 @@ $(document).ready(function () {
 
   // Check if user is admin and load predictive analytics
   checkAdminAndLoadAnalytics();
+  
+  // Load recent inventory transactions
+  loadRecentInventoryTransactions();
 });
 
 // ============================================================================
@@ -621,6 +624,73 @@ function getAllPatients() {
       console.error("AJAX Error:", status, error);
       alert("Error loading patient data. Please try again.");
     },
+  });
+}
+
+// ============================================================================
+// INVENTORY TRANSACTIONS
+// ============================================================================
+
+/**
+ * Load recent inventory transactions for dashboard display
+ */
+function loadRecentInventoryTransactions() {
+  $.ajax({
+    url: "/api/inventory-transactions",
+    method: "GET",
+    data: { limit: 10 },
+    dataType: "json",
+    success: function(response) {
+      const tbody = $("#inventoryTransactionsBody");
+      tbody.empty();
+      
+      if (response.success && response.data && response.data.length > 0) {
+        response.data.forEach(function(tx) {
+          const date = new Date(tx.createdAt);
+          const formattedDate = date.toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric'
+          }) + ', ' + date.toLocaleTimeString('en-US', {
+            hour: 'numeric', minute: '2-digit', hour12: true
+          });
+          
+          // Determine badge color based on transaction type
+          let typeBadge = 'bg-secondary';
+          if (tx.transactionType === 'sale') typeBadge = 'bg-primary';
+          else if (tx.transactionType === 'restock') typeBadge = 'bg-success';
+          else if (tx.transactionType === 'adjustment') typeBadge = 'bg-warning text-dark';
+          else if (tx.transactionType === 'waste') typeBadge = 'bg-danger';
+          
+          // Format quantity change
+          let changeText = tx.quantityChange || 0;
+          let changeClass = '';
+          if (changeText > 0) {
+            changeText = '+' + changeText;
+            changeClass = 'text-success fw-bold';
+          } else if (changeText < 0) {
+            changeClass = 'text-danger fw-bold';
+          }
+          
+          const row = `
+            <tr>
+              <td>${formattedDate}</td>
+              <td>${tx.itemName || 'N/A'}</td>
+              <td>${tx.categoryName || 'N/A'}</td>
+              <td><span class="badge ${typeBadge}">${tx.transactionType || 'N/A'}</span></td>
+              <td class="${changeClass}">${changeText}</td>
+              <td>${tx.performedBy?.userName || 'System'}</td>
+              <td>${tx.notes || '-'}</td>
+            </tr>
+          `;
+          tbody.append(row);
+        });
+      } else {
+        tbody.html('<tr><td colspan="7" class="text-center text-muted py-3">No recent transactions</td></tr>');
+      }
+    },
+    error: function(xhr, status, error) {
+      console.error("Error loading inventory transactions:", error);
+      $("#inventoryTransactionsBody").html('<tr><td colspan="7" class="text-center text-danger py-3">Error loading transactions</td></tr>');
+    }
   });
 }
 

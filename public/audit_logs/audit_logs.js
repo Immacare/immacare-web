@@ -329,3 +329,296 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+// ============================================================================
+// INVENTORY TRANSACTIONS SECTION
+// ============================================================================
+
+let inventoryTable = null;
+let allInventoryTransactions = [];
+let searchTimeout = null;
+
+// Load inventory transactions when tab is shown
+document.addEventListener('DOMContentLoaded', function() {
+  const inventoryTab = document.getElementById('inventory-tab');
+  if (inventoryTab) {
+    inventoryTab.addEventListener('shown.bs.tab', function() {
+      if (!inventoryTable) {
+        loadInventoryTransactions();
+      }
+    });
+  }
+});
+
+// Debounce search input
+function debounceSearch() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(loadInventoryTransactions, 500);
+}
+
+// Load inventory transactions from server
+function loadInventoryTransactions() {
+  const transactionType = $('#invTransactionType').val();
+  const startDate = $('#invStartDate').val();
+  const endDate = $('#invEndDate').val();
+  const search = $('#invSearch').val();
+  
+  let url = '/api/inventory-transactions?limit=500';
+  if (transactionType && transactionType !== 'all') url += `&transactionType=${transactionType}`;
+  if (startDate) url += `&startDate=${startDate}`;
+  if (endDate) url += `&endDate=${endDate}`;
+  if (search) url += `&search=${encodeURIComponent(search)}`;
+  
+  console.log('[INVENTORY AUDIT] Fetching transactions from:', url);
+  
+  $.ajax({
+    url: url,
+    method: 'GET',
+    dataType: 'json',
+    success: function(response) {
+      console.log('[INVENTORY AUDIT] Response received:', response);
+      if (response && response.success && response.data) {
+        allInventoryTransactions = response.data;
+        console.log('[INVENTORY AUDIT] Loaded', response.data.length, 'transactions');
+        renderInventoryTable(response.data);
+        updateInventorySummary(response.data);
+      } else {
+        console.log('[INVENTORY AUDIT] No data in response');
+        renderInventoryTable([]);
+        updateInventorySummary([]);
+      }
+    },
+    error: function(xhr, status, error) {
+      console.error('[INVENTORY AUDIT] Failed to load transactions:', status, error);
+      renderInventoryTable([]);
+      updateInventorySummary([]);
+    }
+  });
+}
+
+// Render inventory transactions table
+function renderInventoryTable(transactions) {
+  if (inventoryTable) {
+    inventoryTable.destroy();
+  }
+  
+  const tbody = $('#inventoryTransactionsBody');
+  tbody.empty();
+  
+  transactions.forEach(tx => {
+    const txDate = new Date(tx.createdAt);
+    const dateTime = txDate.toLocaleString('en-PH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const sortValue = txDate.getTime();
+    
+    const typeBadge = getTransactionTypeBadge(tx.transactionType);
+    const changeClass = tx.quantityChange >= 0 ? 'text-success' : 'text-danger';
+    const changePrefix = tx.quantityChange >= 0 ? '+' : '';
+    const userName = tx.performedBy?.userName || 'System';
+    
+    tbody.append(`
+      <tr>
+        <td data-order="${sortValue}">${dateTime}</td>
+        <td><strong>${escapeHtml(tx.itemName)}</strong></td>
+        <td>${escapeHtml(tx.categoryName || 'N/A')}</td>
+        <td>${typeBadge}</td>
+        <td class="text-center">${tx.quantityBefore}</td>
+        <td class="text-center ${changeClass}"><strong>${changePrefix}${tx.quantityChange}</strong></td>
+        <td class="text-center">${tx.quantityAfter}</td>
+        <td class="text-end">₱${(tx.totalValue || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+        <td>${escapeHtml(userName)}</td>
+        <td>${escapeHtml(tx.notes || '-')}</td>
+      </tr>
+    `);
+  });
+  
+  inventoryTable = $('#inventoryTransactionsTable').DataTable({
+    order: [[0, 'desc']],
+    pageLength: 25,
+    language: {
+      search: "Search:",
+      lengthMenu: "Show _MENU_ entries"
+    },
+    columnDefs: [
+      { type: 'num', targets: 0 }
+    ],
+    scrollX: true
+  });
+}
+
+// Get transaction type badge
+function getTransactionTypeBadge(type) {
+  const badges = {
+    'sale': { class: 'bg-success', icon: 'bi-cart-check', label: 'Sale' },
+    'restock': { class: 'bg-primary', icon: 'bi-box-arrow-in-down', label: 'Restock' },
+    'adjustment': { class: 'bg-warning text-dark', icon: 'bi-sliders', label: 'Adjustment' },
+    'wastage': { class: 'bg-danger', icon: 'bi-trash', label: 'Wastage' },
+    'return': { class: 'bg-info', icon: 'bi-arrow-return-left', label: 'Return' },
+    'transfer_in': { class: 'bg-secondary', icon: 'bi-arrow-down-circle', label: 'Transfer In' },
+    'transfer_out': { class: 'bg-secondary', icon: 'bi-arrow-up-circle', label: 'Transfer Out' },
+    'initial': { class: 'bg-dark', icon: 'bi-plus-circle', label: 'Initial' },
+    'correction': { class: 'bg-warning text-dark', icon: 'bi-pencil-square', label: 'Correction' }
+  };
+  
+  const badge = badges[type] || { class: 'bg-secondary', icon: 'bi-question', label: type };
+  return `<span class="badge ${badge.class}"><i class="bi ${badge.icon} me-1"></i>${badge.label}</span>`;
+}
+
+// Update inventory summary counts
+function updateInventorySummary(transactions) {
+  const salesCount = transactions.filter(t => t.transactionType === 'sale').length;
+  const restockCount = transactions.filter(t => t.transactionType === 'restock').length;
+  const adjustmentCount = transactions.filter(t => t.transactionType === 'adjustment' || t.transactionType === 'correction').length;
+  
+  $('#salesCount').text(salesCount);
+  $('#restockCount').text(restockCount);
+  $('#adjustmentCount').text(adjustmentCount);
+}
+
+// Clear inventory filters
+function clearInventoryFilters() {
+  $('#invTransactionType').val('all');
+  $('#invStartDate').val('');
+  $('#invEndDate').val('');
+  $('#invSearch').val('');
+  loadInventoryTransactions();
+}
+
+// Export inventory transactions to CSV
+function exportInventoryTransactions() {
+  if (allInventoryTransactions.length === 0) {
+    alert('No transactions to export');
+    return;
+  }
+  
+  const headers = ['Date', 'Item', 'Category', 'Type', 'Qty Before', 'Change', 'Qty After', 'Value', 'Performed By', 'Notes'];
+  const rows = allInventoryTransactions.map(tx => [
+    new Date(tx.createdAt).toLocaleString(),
+    tx.itemName,
+    tx.categoryName || '',
+    tx.transactionType,
+    tx.quantityBefore,
+    tx.quantityChange,
+    tx.quantityAfter,
+    tx.totalValue || 0,
+    tx.performedBy?.userName || 'System',
+    tx.notes || ''
+  ]);
+  
+  let csv = headers.join(',') + '\n';
+  rows.forEach(row => {
+    csv += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',') + '\n';
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `inventory_transactions_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+// Print current tab
+function printCurrentTab() {
+  const activeTab = document.querySelector('.tab-pane.active');
+  if (activeTab && activeTab.id === 'inventory-transactions') {
+    printInventoryTransactions();
+  } else {
+    printAuditLogs();
+  }
+}
+
+// Print inventory transactions
+function printInventoryTransactions() {
+  let userRole = 'Unknown';
+  let userFullName = 'Unknown';
+  
+  try {
+    if (window.parent && window.parent !== window) {
+      const parentUsername = window.parent.document.getElementById('usernameDisplay');
+      const parentRole = window.parent.document.getElementById('role');
+      if (parentUsername) userFullName = parentUsername.textContent.trim();
+      if (parentRole) userRole = parentRole.value.charAt(0).toUpperCase() + parentRole.value.slice(1);
+    }
+  } catch (e) {}
+  
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Inventory Transactions Report</title>
+      <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; font-size: 10px; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 15px; }
+        .header h1 { margin: 0; color: #2c5282; font-size: 18px; }
+        .meta { display: flex; justify-content: space-between; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; }
+        th { background: #2c5282; color: #fff; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .positive { color: green; }
+        .negative { color: red; }
+        .summary { display: flex; gap: 20px; margin-bottom: 15px; }
+        .summary-item { text-align: center; }
+        .summary-item .value { font-size: 16px; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>IMMACARE CLINIC</h1>
+        <p>Inventory Transactions Audit Report</p>
+      </div>
+      <div class="meta">
+        <div><strong>Generated:</strong> ${new Date().toLocaleString()}</div>
+        <div><strong>By:</strong> ${userFullName} (${userRole})</div>
+      </div>
+      <div class="summary">
+        <div class="summary-item"><div class="value">${$('#salesCount').text()}</div><div>Sales</div></div>
+        <div class="summary-item"><div class="value">${$('#restockCount').text()}</div><div>Restocks</div></div>
+        <div class="summary-item"><div class="value">${$('#adjustmentCount').text()}</div><div>Adjustments</div></div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Item</th>
+            <th>Category</th>
+            <th>Type</th>
+            <th>Before</th>
+            <th>Change</th>
+            <th>After</th>
+            <th>Value</th>
+            <th>By</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allInventoryTransactions.map(tx => `
+            <tr>
+              <td>${new Date(tx.createdAt).toLocaleString()}</td>
+              <td>${tx.itemName}</td>
+              <td>${tx.categoryName || '-'}</td>
+              <td>${tx.transactionType}</td>
+              <td>${tx.quantityBefore}</td>
+              <td class="${tx.quantityChange >= 0 ? 'positive' : 'negative'}">${tx.quantityChange >= 0 ? '+' : ''}${tx.quantityChange}</td>
+              <td>${tx.quantityAfter}</td>
+              <td>₱${(tx.totalValue || 0).toFixed(2)}</td>
+              <td>${tx.performedBy?.userName || 'System'}</td>
+              <td>${tx.notes || '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <script>window.onload = function() { window.print(); }</script>
+    </body>
+    </html>
+  `);
+  printWindow.document.close();
+}
