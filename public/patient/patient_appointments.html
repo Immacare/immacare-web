@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Appointments - Immacare</title>
+  <title>Appointment List - Immacare</title>
   <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css" />
   <link rel="stylesheet" href="/bootstrap-icons/font/bootstrap-icons.min.css" />
   <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
@@ -15,29 +15,8 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <link rel="stylesheet" href="patient.css" />
   <style>
-    .badge-booked {
-      background-color: #0d6efd;
-      color: white;
-    }
-
-    .badge-completed {
-      background-color: #198754;
-      color: white;
-    }
-
-    .badge-emergency {
-      background-color: #dc3545;
-      color: white;
-    }
-
-    .badge-cancelled {
-      background-color: #dc3545;
-      color: white;
-    }
-
-    .badge-inqueue {
-      background-color: #ffc107;
-      color: #212529;
+    .hide-col {
+      display: none;
     }
 
     .nav-tabs .nav-link {
@@ -62,65 +41,307 @@
 <body>
   <div class="card shadow-lg rounded p-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="mb-0">My Appointments</h2>
-      <input type="hidden" id="user_id" />
-      <input type="hidden" id="role" />
+      <h2 class="mb-0">Appointment List</h2>
+      <input type="hidden" class="form-control" id="user_id_list" readonly />
+      <input type="hidden" class="form-control" id="role_list" readonly />
     </div>
+    <div class="container mt-5">
+      <div class="row mb-3">
+        <div class="col-md-5 d-flex align-items-center">
+          <label for="date" class="col-sm-4 col-form-label">Booked Date:</label>
+          <div class="col-sm-8">
+            <input type="date" class="form-control criteria" id="bookingDate" name="date" tabindex="1" />
+          </div>
+        </div>
 
+        <div class="col-md-5 d-flex align-items-center">
+          <label for="patientName" class="col-sm-4 col-form-label">Patient Name:</label>
+          <div class="col-sm-8">
+            <input type="text" class="form-control criteria" id="patientName" name="patientName" tabindex="1"
+              readonly />
+          </div>
+        </div>
 
-
-    <!-- Appointment History Section -->
-    <div id="appointment-history" class="mt-3">
-      <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-          <label class="mb-0 small">Filter:</label>
-          <input type="date" class="form-control form-control-sm" id="appointmentDateFrom" style="width: 140px;">
-          <span class="small">to</span>
-          <input type="date" class="form-control form-control-sm" id="appointmentDateTo" style="width: 140px;">
-          <button type="button" class="btn btn-sm btn-secondary" onclick="filterAppointmentHistory()">
-            <i class="bi bi-funnel"></i> Apply
-          </button>
-          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAppointmentFilter()">
+        <div class="col-md-2 d-flex align-items-center">
+          <button type="button" class="btn btn-info btn-md w-50" onclick="clearCriteria()">
             Clear
           </button>
         </div>
-        <button type="button" class="btn btn-outline-primary btn-sm" onclick="printAppointmentHistory()">
-          <i class="bi bi-printer me-1"></i>Print
-        </button>
       </div>
-      <div class="table-responsive">
-        <table id="appointmentTable" class="table table-striped table-bordered table-hover">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Time</th>
-              <th>Consultation Type</th>
-              <th>Doctor</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="appointmentBody">
-          </tbody>
-        </table>
+      <div class="row mb-3">
+        <div class="col-md-5 d-flex align-items-center">
+          <label for="status" class="col-sm-4 col-form-label">Status:</label>
+          <div class="col-sm-8">
+            <select class="form-select criteria" id="status" name="status">
+              <option selected value=""></option>
+              <option value="Booked">Booked</option>
+              <option value="In Queue">In Queue</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="col-md-5 d-flex align-items-center">
+          <label for="consultationType" class="col-sm-4 col-form-label">Consultation type:</label>
+          <div class="col-sm-8">
+            <select class="form-select criteria" id="consultationType" name="consultationType">
+              <option selected value="">Select Specialty</option>
+              <option value="10">2D Echo</option>
+              <option value="19">Ear Piercing</option>
+              <option value="7">ECG</option>
+              <option value="17">ENT</option>
+              <option value="3">Family Planning</option>
+              <option value="9">Hearing screening test</option>
+              <option value="15">Internal Medicine</option>
+              <option value="6">Laboratory Services</option>
+              <option value="11">Minor Surgery</option>
+              <option value="8">Non-stress test for pregnant</option>
+              <option value="12">Obgyne</option>
+              <option value="18">Opthalmologist</option>
+              <option value="20">Papsmear</option>
+              <option value="13">Pediatrician</option>
+              <option value="2">Post Natal</option>
+              <option value="1">Prenatal</option>
+              <option value="14">Surgeon</option>
+              <option value="5">Ultrasound</option>
+              <option value="16">Urology</option>
+              <option value="4">Vaccination (Pedia and Adult)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="col-md-2 d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-success btn-md" onclick="searchBooking()">
+            Search
+          </button>
+          <button type="button" class="btn btn-secondary btn-md" onclick="printBookingList()"
+            title="Print Appointment List">
+            <i class="bi bi-printer"></i> Print
+          </button>
+        </div>
       </div>
-      <div id="noAppointments" class="text-center text-muted py-4" style="display: none;">
-        <i class="bi bi-calendar-x fs-1"></i>
-        <p>No appointment history found.</p>
+    </div>
+    <table id="bookingTable" class="table table-light table-striped table-bordered table-hover">
+      <thead>
+        <tr>
+          <th class="hide-col">UserID</th>
+          <th>Action</th>
+          <th>Booked Date</th>
+          <th>Status</th>
+          <th>Patient Name</th>
+          <th>Consultation Type</th>
+        </tr>
+      </thead>
+    </table>
+    <input type="hidden" id="booking_id" />
+    <input type="hidden" id="queue_no" />
+  </div>
+
+  <!-- View Booking Modal -->
+  <div class="modal fade" id="bookingModal" aria-labelledby="bookingModalLabel">
+    <div class="modal-dialog modal-md">
+      <div class="modal-content">
+        <div class="modal-header">
+          <input type="hidden" id="role" />
+          <h1 class="modal-title fs-5" id="bookingModalLabel">
+            View Booking
+          </h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row mb-3 align-items-center">
+            <label for="labelConsultationType" class="col-sm-5 col-form-label text-end">
+              <strong>Consultation Type:</strong></label>
+            <div class="col-sm-7">
+              <label id="labelConsultationType" class="form-control-plaintext"></label>
+            </div>
+          </div>
+
+          <div class="row mb-3 align-items-center">
+            <label for="labelBookedDate" class="col-sm-5 col-form-label text-end">
+              <strong>Date:</strong>
+            </label>
+            <div class="col-sm-7">
+              <label id="labelBookedDate" class="form-control-plaintext"></label>
+            </div>
+          </div>
+
+          <div class="row mb-3 align-items-center">
+            <label for="labelBookedTime" class="col-sm-5 col-form-label text-end">
+              <strong>Time:</strong>
+            </label>
+            <div class="col-sm-7">
+              <label id="labelBookedTime" class="form-control-plaintext"></label>
+            </div>
+          </div>
+          <hr />
+
+          <div class="row mb-3 align-items-center">
+            <label for="labelFullname" class="col-sm-5 col-form-label text-end">
+              <strong>Fullname:</strong>
+            </label>
+            <div class="col-sm-7">
+              <label id="labelFullname" class="form-control-plaintext"></label>
+            </div>
+          </div>
+
+          <div class="row mb-3 align-items-center">
+            <label for="labelGender" class="col-sm-5 col-form-label text-end">
+              <strong>Gender:</strong>
+            </label>
+            <div class="col-sm-7">
+              <label id="labelGender" class="form-control-plaintext"></label>
+            </div>
+          </div>
+
+          <div class="row mb-3 align-items-center">
+            <label for="labelAge" class="col-sm-5 col-form-label text-end"><strong>Age:</strong></label>
+            <div class="col-sm-7">
+              <label id="labelAge" class="form-control-plaintext"></label>
+            </div>
+          </div>
+
+          <div class="row mb-3 align-items-center" id="divCancellationReason" style="display: none;">
+            <label for="labelCancellationReason"
+              class="col-sm-5 col-form-label text-end text-danger"><strong>Cancellation Reason:</strong></label>
+            <div class="col-sm-7">
+              <label id="labelCancellationReason" class="form-control-plaintext text-danger"></label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between w-100">
+          <div class="d-flex justify-content-center w-100">
+            <button type="button" class="btn btn-danger btn-md me-2 updateBookingBtn" id="cancelBooking"
+              onclick="cancelBooking()">
+              Cancel Booking
+            </button>
+            <button type="button" class="btn btn-primary btn-md updateBookingBtn" id="reschedBooking"
+              onclick="reschedBooking()">
+              Reschedule Booking
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reschedule Booking Modal -->
+  <div class="modal fade" id="reschedModal" tabindex="-1" aria-labelledby="reschedModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5" id="reschedModalLabel">
+            Reschedule Booking
+          </h1>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="container mt-4">
+            <div class="col-md-10 d-flex align-items-center mb-2">
+              <label for="newDateBooking" class="col-sm-4 col-form-label">New Date:</label>
+              <div class="col-sm-8">
+                <input type="date" class="form-control" id="newDateBooking" />
+              </div>
+            </div>
+
+            <div class="col-md-10 d-flex align-items-center mb-2">
+              <label for="newTimeBooking" class="col-sm-4 col-form-label">New Time:</label>
+              <div class="col-sm-8">
+                <select class="form-select" id="newTimeBooking" name="newTimeBooking">
+                  <option selected value=""></option>
+                  <option value="8:00 AM - 9:00 AM">8:00 AM - 9:00 AM</option>
+                  <option value="9:00 AM - 10:00 AM">9:00 AM - 10:00 AM</option>
+                  <option value="10:00 AM - 11:00 AM">10:00 AM - 11:00 AM</option>
+                  <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
+                  <option value="12:00 PM - 1:00 PM">12:00 PM - 1:00 PM</option>
+                  <option value="1:00 PM - 2:00 PM">1:00 PM - 2:00 PM</option>
+                  <option value="2:00 PM - 3:00 PM">2:00 PM - 3:00 PM</option>
+                  <option value="3:00 PM - 4:00 PM">3:00 PM - 4:00 PM</option>
+                  <option value="4:00 PM - 5:00 PM">4:00 PM - 5:00 PM</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between w-100">
+          <div class="d-flex justify-content-center w-100">
+            <button type="button" class="btn btn-success btn-md" onclick="saveNewBooking()">
+              Save New Schedule of Booking
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    let appointmentTable = null;
-    let allAppointments = [];
+    let bookingTable;
+    let role;
 
-    $(document).ready(function () {
-      // Get user info from session API
-      getSession();
+    // Click View Booking in Datatable - Opening of Modal and showing booking data
+    document.addEventListener("DOMContentLoaded", function () {
+      $(document).on("click", ".get-user-btn", function () {
+        const id = $(this).data("id");
+        $.ajax({
+          url: `/getBookingListById/${id}`,
+          method: "GET",
+          success: function (response) {
+            const user = response.data[0];
+            $("#booking_id").val(user.id);
+            $("#queue_no").val(user.queue_no);
+
+            document.getElementById("labelConsultationType").textContent = user.consultation_type;
+            document.getElementById("labelBookedDate").textContent = user.booking_date;
+            document.getElementById("labelBookedTime").textContent = user.booking_time;
+            document.getElementById("labelFullname").textContent = user.fullname;
+            document.getElementById("labelGender").textContent = user.gender;
+            document.getElementById("labelAge").textContent = user.age;
+
+            if (user.status === 'Cancelled') {
+              document.getElementById("labelCancellationReason").textContent = user.reason || "Not specified";
+              document.getElementById("divCancellationReason").style.display = '';
+            } else {
+              document.getElementById("labelCancellationReason").textContent = '';
+              document.getElementById("divCancellationReason").style.display = 'none';
+            }
+          },
+          error: function () {
+            alert("Failed to load booking details");
+          },
+        });
+      });
     });
 
-    // Get session data from server
-    function getSession() {
+    // Set minimum date for reschedule to tomorrow
+    document.addEventListener("DOMContentLoaded", function () {
+      const dateInput = document.getElementById("newDateBooking");
+      if (dateInput) {
+        const today = new Date();
+        today.setDate(today.getDate() + 1);
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const dd = String(today.getDate()).padStart(2, "0");
+        dateInput.min = `${yyyy}-${mm}-${dd}`;
+      }
+    });
+
+    function clearCriteria() {
+      $(".criteria").val("");
+      bookingTable.ajax.reload();
+    }
+
+    function searchBooking() {
+      bookingTable.ajax.reload();
+    }
+
+    function formatDateToDB(dateString) {
+      if (!dateString) return "";
+      const [year, month, day] = dateString.split("-");
+      return `${month}-${day}-${year}`;
+    }
+
+    $(document).ready(function () {
       fetch("/homepage", {
         method: "GET",
         credentials: "include",
@@ -134,102 +355,273 @@
           return response.json();
         })
         .then((data) => {
-          console.log('[PATIENT_APPOINTMENTS] Session data:', data);
-          $('#user_id').val(data.user_id);
-          $('#role').val(data.role);
+          role = data.role;
+          $("#user_id_list").val(data.user_id_id);
+          $("#role_list").val(data.role);
+          $("#role").val(data.role);
 
-          // Now load patient history
-          loadAppointmentHistory();
+          initBookingTable();
         })
         .catch((error) => {
-          console.error('[PATIENT_APPOINTMENTS] Error getting session:', error);
+          console.error("Error:", error.message);
         });
+
+      $("#status").on("change", function () {
+        bookingTable.ajax.reload();
+      });
+    });
+
+    function initBookingTable() {
+      const bookingTableEl = document.getElementById("bookingTable");
+      if (bookingTableEl && $.fn.DataTable) {
+        bookingTable = $("#bookingTable").DataTable({
+          columnDefs: [
+            { targets: 1, width: "16%" },
+            {
+              targets: [0],
+              visible: false,
+            },
+          ],
+          order: [],
+          searching: false,
+          responsive: true,
+          ajax: {
+            url: "/getBookingListSearch",
+            dataSrc: "data",
+            data: function (d) {
+              d.booking_date = $("#bookingDate").val()
+                ? formatDateToDB($("#bookingDate").val())
+                : "";
+              d.fullname = $("#patientName").val();
+              d.status = $("#status").val();
+              d.consultation_type = $("#consultationType").val();
+              d.role = "patient";
+              d.user_id = $("#user_id_list").val();
+            },
+          },
+          columns: [
+            { data: "id" },
+            {
+              data: null,
+              orderable: false,
+              searchable: false,
+              render: function (data, type, row) {
+                return `<div class="d-flex flex-nowrap">
+                  <button
+                    class="btn btn-info btn-sm get-user-btn me-2"
+                    onclick="viewBookingModal(this)"
+                    data-id="${row.id}"
+                    data-status="${row.status}"
+                    data-bookingdate="${row.booking_date}"
+                  >
+                    View Booking
+                  </button>
+                </div>`;
+              },
+            },
+            { data: "booking_date" },
+            {
+              data: "status",
+              render: function (data) {
+                let statusClass = "";
+                if (data.toLowerCase() === "booked") {
+                  statusClass = "badge bg-info";
+                } else if (data.toLowerCase() === "in queue" || data.toLowerCase() === "consulted") {
+                  statusClass = "badge bg-warning";
+                } else if (data.toLowerCase() === "completed") {
+                  statusClass = "badge bg-success";
+                } else if (data.toLowerCase() === "cancelled") {
+                  statusClass = "badge bg-danger";
+                } else if (data.toLowerCase() === "emergency") {
+                  statusClass = "badge bg-secondary";
+                } else {
+                  statusClass = "badge bg-secondary";
+                }
+                return `<span class="${statusClass}">${data}</span>`;
+              },
+            },
+            { data: "fullname" },
+            { data: "consultation_type" },
+          ],
+        });
+      }
     }
 
-    function getStatusBadge(status) {
-      const badges = {
-        'Booked': '<span class="badge badge-booked">Booked</span>',
-        'Completed': '<span class="badge badge-completed">Completed</span>',
-        'Emergency': '<span class="badge badge-emergency">Emergency</span>',
-        'Cancelled': '<span class="badge badge-cancelled">Cancelled</span>',
-        'In Queue': '<span class="badge badge-inqueue">In Queue</span>'
-      };
-      return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+    function viewBookingModal(button) {
+      const status = $(button).data("status");
+      const current_booking_date = $(button).data("bookingdate");
+      const modal = new bootstrap.Modal(document.getElementById("bookingModal"));
+
+      const dateStr = current_booking_date;
+      const labelDate = new Date(dateStr);
+      const today = new Date();
+
+      const date = new Date(today);
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const year = date.getFullYear();
+      const formattedDate = `${month}-${day}-${year}`;
+
+      today.setHours(0, 0, 0, 0);
+      labelDate.setHours(0, 0, 0, 0);
+
+      // Reset buttons
+      $(".updateBookingBtn").show();
+
+      // Hide cancel/reschedule for past dates
+      if (labelDate < today) {
+        $("#cancelBooking").prop("disabled", true);
+      } else {
+        $("#cancelBooking").prop("disabled", false);
+      }
+
+      // Hide buttons for non-actionable statuses
+      if (
+        status === "Emergency" ||
+        status === "Cancelled" ||
+        status === "Completed" ||
+        status === "In Queue" ||
+        status === "Consulted"
+      ) {
+        $(".updateBookingBtn").hide();
+      }
+
+      modal.show();
     }
 
-    function loadAppointmentHistory() {
-      const userId = $('#user_id').val();
-      if (!userId) return;
+    function reschedBooking() {
+      const bookingModalEl = document.getElementById("bookingModal");
+      const reschedModalEl = document.getElementById("reschedModal");
 
-      $.ajax({
-        url: `/getPatientAppointmentHistory/${userId}`,
-        method: 'GET',
-        success: function (response) {
-          allAppointments = response.data || [];
-          renderAppointmentTable(allAppointments);
-        },
-        error: function () {
-          $('#appointmentTable').hide();
-          $('#noAppointments').show();
+      const bookingModal = bootstrap.Modal.getInstance(bookingModalEl);
+      const reschedModal = new bootstrap.Modal(reschedModalEl);
+
+      if (bookingModal) {
+        bookingModal.hide();
+      }
+
+      reschedModal.show();
+    }
+
+    function saveNewBooking() {
+      const newBookingDate = $("#newDateBooking").val();
+      const newBookingTime = $("#newTimeBooking").val();
+      const booking_id = $("#booking_id").val();
+      const rawDate = newBookingDate;
+      const dateObj = new Date(rawDate);
+
+      const formattedDate =
+        ("0" + (dateObj.getMonth() + 1)).slice(-2) +
+        "-" +
+        ("0" + dateObj.getDate()).slice(-2) +
+        "-" +
+        dateObj.getFullYear();
+
+      if (newBookingDate === "" || newBookingTime === "") {
+        Swal.fire({
+          title: "",
+          text: "Complete the required fields",
+          icon: "error",
+        });
+      } else {
+        Swal.fire({
+          title: "Are you sure?",
+          text: "Do you want to reschedule your booking?",
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonColor: "#28a745",
+          confirmButtonText: "Yes",
+          backdrop: false,
+        }).then((result) => {
+          if (result.isConfirmed) {
+            $.ajax({
+              url: "/reschedBooking",
+              method: "POST",
+              contentType: "application/json",
+              data: JSON.stringify({
+                formattedDate,
+                newBookingTime,
+                booking_id,
+              }),
+              success: function (response) {
+                Swal.fire({
+                  icon: "success",
+                  title: "Updated!",
+                  text: "Your booking has been rescheduled successfully.",
+                }).then(() => {
+                  $("#reschedModal").modal("hide");
+                  bookingTable.ajax.reload();
+                });
+              },
+              error: function (xhr) {
+                Swal.fire({
+                  icon: "error",
+                  title: "Error",
+                  text: xhr.responseJSON?.message || "Something went wrong.",
+                });
+              },
+            });
+          }
+        });
+      }
+    }
+
+    function cancelBooking() {
+      const booking_id = $("#booking_id").val();
+      const tag = "Cancelled";
+      Swal.fire({
+        target: document.getElementById('bookingModal'),
+        title: "Are you sure?",
+        text: "Do you want to cancel your booking?",
+        icon: "warning",
+        input: "text",
+        inputPlaceholder: "Enter reason for cancellation...",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Yes, cancel it!",
+        backdrop: false,
+        preConfirm: (reason) => {
+          if (!reason) {
+            Swal.showValidationMessage('Please enter a reason for cancellation');
+          }
+          return reason;
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const reason = result.value;
+          $.ajax({
+            url: "/cancelBooking",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+              booking_id,
+              tag,
+              reason
+            }),
+            success: function (response) {
+              Swal.fire({
+                icon: "success",
+                title: "Cancelled!",
+                text: "Your booking has been cancelled.",
+              }).then(() => {
+                $("#bookingModal").modal("hide");
+                bookingTable.ajax.reload();
+              });
+            },
+            error: function (xhr) {
+              Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: xhr.responseJSON?.message || "Something went wrong.",
+              });
+            },
+          });
         }
       });
     }
 
-    function renderAppointmentTable(data) {
-      const tbody = $('#appointmentBody');
-      tbody.empty();
-
-      if (data && data.length > 0) {
-        $('#appointmentTable').show();
-        $('#noAppointments').hide();
-
-        data.forEach(function (apt) {
-          tbody.append(`
-              <tr>
-                <td>${apt.booking_date || 'N/A'}</td>
-                <td>${apt.booking_time || 'N/A'}</td>
-                <td>${apt.consultation_type || 'N/A'}</td>
-                <td>${apt.doctor_name || 'Not Assigned'}</td>
-                <td>${getStatusBadge(apt.status)}</td>
-              </tr>
-            `);
-        });
-
-        if (appointmentTable) appointmentTable.destroy();
-        appointmentTable = $('#appointmentTable').DataTable({
-          order: [[0, 'desc']],
-          pageLength: 10
-        });
-      } else {
-        $('#appointmentTable').hide();
-        $('#noAppointments').show();
-      }
-    }
-
-    function filterAppointmentHistory() {
-      const from = $('#appointmentDateFrom').val();
-      const to = $('#appointmentDateTo').val();
-      const filtered = allAppointments.filter(a => {
-        if (!a.booking_date) return false;
-        const date = a.booking_date;
-        if (from && date < from) return false;
-        if (to && date > to) return false;
-        return true;
-      });
-      if (appointmentTable) appointmentTable.destroy();
-      appointmentTable = null;
-      renderAppointmentTable(filtered);
-    }
-
-    function clearAppointmentFilter() {
-      $('#appointmentDateFrom').val('');
-      $('#appointmentDateTo').val('');
-      if (appointmentTable) appointmentTable.destroy();
-      appointmentTable = null;
-      renderAppointmentTable(allAppointments);
-    }
-
-    function printAppointmentHistory() {
+    function printBookingList() {
       window.print();
     }
   </script>

@@ -27,6 +27,16 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById("labelGender").textContent = user.gender;
 
         document.getElementById("labelAge").textContent = user.age;
+        console.log("User Data from API:", user); // Debugging
+
+
+        if (user.status === 'Cancelled') {
+          document.getElementById("labelCancellationReason").textContent = user.reason || "Not specified";
+          document.getElementById("divCancellationReason").style.display = '';
+        } else {
+          document.getElementById("labelCancellationReason").textContent = '';
+          document.getElementById("divCancellationReason").style.display = 'none';
+        }
 
         document.getElementById("labelConsultationType2").textContent =
           user.consultation_type;
@@ -364,7 +374,7 @@ function initBookingTable() {
             const showProfileButton = role === "doctor";
 
             return `<div class="d-flex flex-nowrap">${showViewBooking
-                ? `<button
+              ? `<button
               class="btn btn-info btn-sm get-user-btn adminBtn me-2"
               onclick="viewBookingModal(this)" 
               data-id="${row.id}"
@@ -373,7 +383,7 @@ function initBookingTable() {
             >
               View Booking
             </button>`
-                : ""
+              : ""
               }${!hideTagButton
                 ? `<button
               class="btn btn-secondary btn-sm get-user-btn adminBtn"
@@ -1306,6 +1316,9 @@ function viewBookingModal(button) {
 function tagModal(button) {
   const status = $(button).data("status");
   const current_booking_date = $(button).data("bookingdate");
+  const id = $(button).data("id");
+  $("#booking_id").val(id);
+
   const modal = new bootstrap.Modal(document.getElementById("tagModal"));
   const role = $("#role").val();
   const dateStr = current_booking_date;
@@ -1424,15 +1437,26 @@ function cancelBooking() {
   const booking_id = $("#booking_id").val();
   const tag = "Cancelled";
   Swal.fire({
+    target: document.getElementById('bookingModal'),
     title: "Are you sure?",
     text: "Do you want to cancel your booking?",
-    icon: "question",
+    icon: "warning",
+    input: "text",
+    inputPlaceholder: "Enter reason for cancellation...",
     showCancelButton: true,
-    confirmButtonColor: "#28a745",
-    confirmButtonText: "Yes",
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#3085d6",
+    confirmButtonText: "Yes, cancel it!",
     backdrop: false,
+    preConfirm: (reason) => {
+      if (!reason) {
+        Swal.showValidationMessage('Please enter a reason for cancellation');
+      }
+      return reason;
+    }
   }).then((result) => {
     if (result.isConfirmed) {
+      const reason = result.value;
       $.ajax({
         url: "/cancelBooking",
         method: "POST",
@@ -1440,6 +1464,7 @@ function cancelBooking() {
         data: JSON.stringify({
           booking_id,
           tag,
+          reason
         }),
         success: function (response) {
           Swal.fire({
@@ -1447,7 +1472,7 @@ function cancelBooking() {
             title: "Cancelled!",
             text: "Your booking has been cancelled.",
           }).then(() => {
-            $("#reschedModal").modal("hide");
+            $("#bookingModal").modal("hide");
             // Reload DataTable
             bookingTable.ajax.reload();
           });
@@ -1467,6 +1492,62 @@ function cancelBooking() {
 function saveTag() {
   const booking_id = $("#booking_id").val();
   const tag = $("#tag").val();
+
+  if (tag === "Cancelled") {
+    Swal.fire({
+      target: document.getElementById('tagModal'),
+      title: "Are you sure?",
+      text: "Do you want to cancel this booking?",
+      icon: "warning",
+      input: "text",
+      inputPlaceholder: "Enter reason for cancellation...",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, cancel it!",
+      backdrop: false,
+      preConfirm: (reason) => {
+        if (!reason) {
+          Swal.showValidationMessage('Please enter a reason for cancellation');
+        }
+        return reason;
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const reason = result.value;
+        $.ajax({
+          url: "/cancelBooking",
+          method: "POST",
+          contentType: "application/json",
+          data: JSON.stringify({
+            booking_id,
+            tag,
+            reason
+          }),
+          success: function (response) {
+            Swal.fire({
+              icon: "success",
+              title: "Tagged as " + tag + "!",
+              text: "Reason: " + reason,
+            }).then(() => {
+              $("#tagModal").modal("hide");
+              // Reload DataTable
+              bookingTable.ajax.reload();
+            });
+          },
+          error: function (xhr) {
+            Swal.fire({
+              icon: "error",
+              title: "Error",
+              text: xhr.responseJSON?.message || "Something went wrong.",
+            });
+          },
+        });
+      }
+    });
+    return;
+  }
+
   Swal.fire({
     title: "Are you sure?",
     text: "Do you want to tag this booking as " + tag + "?",
@@ -1496,6 +1577,7 @@ function saveTag() {
             bookingTable.ajax.reload();
           });
         },
+
         error: function (xhr) {
           Swal.fire({
             icon: "error",

@@ -119,7 +119,7 @@
     <input type="hidden" id="queue_no" />
   </div>
 
-  <div class="modal fade" id="bookingModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal fade" id="bookingModal" aria-labelledby="exampleModalLabel">
     <div class="modal-dialog modal-md">
       <div class="modal-content">
         <div class="modal-header">
@@ -184,6 +184,14 @@
             <label for="labelAge" class="col-sm-5 col-form-label text-end"><strong>Age:</strong></label>
             <div class="col-sm-7">
               <label id="labelAge" class="form-control-plaintext"></label>
+            </div>
+          </div>
+
+          <div class="row mb-3 align-items-center" id="divCancellationReason" style="display: none;">
+            <label for="labelCancellationReason"
+              class="col-sm-5 col-form-label text-end text-danger"><strong>Cancellation Reason:</strong></label>
+            <div class="col-sm-7">
+              <label id="labelCancellationReason" class="form-control-plaintext text-danger"></label>
             </div>
           </div>
         </div>
@@ -265,7 +273,7 @@
     </div>
   </div>
 
-  <div class="modal fade" id="tagModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal fade" id="tagModal" aria-labelledby="exampleModalLabel">
     <div class="modal-dialog modal-md">
       <div class="modal-content">
         <div class="modal-header">
