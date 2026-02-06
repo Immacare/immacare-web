@@ -363,9 +363,8 @@ function initBookingTable() {
             const showViewBooking = role !== "doctor";
             const showProfileButton = role === "doctor";
 
-            return `<div class="d-flex flex-nowrap">${
-        showViewBooking
-          ? `<button
+            return `<div class="d-flex flex-nowrap">${showViewBooking
+                ? `<button
               class="btn btn-info btn-sm get-user-btn adminBtn me-2"
               onclick="viewBookingModal(this)" 
               data-id="${row.id}"
@@ -374,10 +373,9 @@ function initBookingTable() {
             >
               View Booking
             </button>`
-          : ""
-      }${
-        !hideTagButton
-          ? `<button
+                : ""
+              }${!hideTagButton
+                ? `<button
               class="btn btn-secondary btn-sm get-user-btn adminBtn"
               onclick="tagModal(this)" 
               data-id="${row.id}"
@@ -386,10 +384,9 @@ function initBookingTable() {
             >
               Tag
             </button>`
-          : ""
-      }${
-        showProfileButton
-          ? `<a
+                : ""
+              }${showProfileButton
+                ? `<a
               class="btn btn-success btn-sm get-user-btn adminBtn"
              href="../patient/patient_profile.html?patient_id=${row.patient_user_id}&appointment_id=${row.id}"
 
@@ -397,14 +394,11 @@ function initBookingTable() {
             >
               View Patient Profile
             </a>`
-          : ""
-      }</div>`;
+                : ""
+              }</div>`;
           },
         },
-        { data: "fullname" },
-        { data: "consultation_type" },
         { data: "booking_date" },
-        { data: "queue_no" },
         {
           data: "status",
           render: function (data) {
@@ -428,6 +422,8 @@ function initBookingTable() {
             return `<span class="${statusClass}">${data}</span>`;
           },
         },
+        { data: "fullname" },
+        { data: "consultation_type" },
       ],
     });
   }
@@ -856,7 +852,7 @@ function validateStep2() {
       const mobileValue = value.replace(/\D/g, "");
       const startsWithCountryCode = mobileValue.startsWith("63");
       const maxLength = startsWithCountryCode ? 12 : 11;
-      
+
       if (!mobileValue || mobileValue.length < 10 || mobileValue.length > maxLength) {
         field.classList.add("is-invalid");
         if (!firstInvalidField) firstInvalidField = field;
@@ -982,12 +978,12 @@ function validateStep3() {
       // Validate length: 11 digits normally, or 12 if starts with 63
       const startsWithCountryCode = mobileValue.startsWith("63");
       const maxLength = startsWithCountryCode ? 12 : 11;
-      
+
       if (mobileValue.length > maxLength) {
         Swal.fire({
           icon: "error",
-          text: startsWithCountryCode 
-            ? "Mobile number must be 12 digits when starting with 63." 
+          text: startsWithCountryCode
+            ? "Mobile number must be 12 digits when starting with 63."
             : "Mobile number must be 11 digits max.",
         });
         if (!firstInvalidField) firstInvalidField = field;
@@ -1051,8 +1047,8 @@ document.addEventListener("DOMContentLoaded", () => {
     mobileField.addEventListener("keydown", (e) => {
       // Allow: backspace, delete, tab, escape, enter, arrows
       if ([8, 9, 27, 13, 46, 37, 38, 39, 40].includes(e.keyCode) ||
-          // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-          (e.keyCode >= 65 && e.keyCode <= 90 && (e.ctrlKey || e.metaKey))) {
+        // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        (e.keyCode >= 65 && e.keyCode <= 90 && (e.ctrlKey || e.metaKey))) {
         return;
       }
       // Block non-numeric keys
@@ -1183,7 +1179,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 });
-  
+
 //step5
 function validateStep5() {
   const labelIds = [

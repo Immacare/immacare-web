@@ -51,7 +51,7 @@ function getUrlFromIframePath(iframePath) {
 
 document.addEventListener("DOMContentLoaded", function () {
   const iframe = document.getElementById("main-content-frame");
-  
+
   // Load content based on current URL path instead of localStorage
   const iframePath = getIframePathFromUrl();
   iframe.src = iframePath;
@@ -61,7 +61,7 @@ function loadPage(pageUrl, updateHistory = true) {
   const iframe = document.getElementById("main-content-frame");
   iframe.src = pageUrl;
   localStorage.setItem("lastIframePage", pageUrl);
-  
+
   // Update browser URL using History API
   if (updateHistory) {
     const newUrl = getUrlFromIframePath(pageUrl);
@@ -72,7 +72,7 @@ function loadPage(pageUrl, updateHistory = true) {
 }
 
 // Handle browser back/forward buttons
-window.addEventListener('popstate', function(event) {
+window.addEventListener('popstate', function (event) {
   if (event.state && event.state.iframePath) {
     loadPage(event.state.iframePath, false);
   } else {
@@ -83,7 +83,7 @@ window.addEventListener('popstate', function(event) {
       iframe.src = iframePath;
     }
   }
-  
+
   // Update active nav link
   updateActiveNavLink();
 });
@@ -92,10 +92,10 @@ window.addEventListener('popstate', function(event) {
 function updateActiveNavLink() {
   const currentPath = window.location.pathname;
   const navLinks = document.querySelectorAll(".nav-link");
-  
+
   navLinks.forEach(function (nav) {
     nav.classList.remove("active");
-    
+
     // Check if this nav link's onclick matches current path
     const onclickAttr = nav.getAttribute('onclick');
     if (onclickAttr) {
@@ -125,7 +125,7 @@ document.addEventListener("DOMContentLoaded", function () {
       this.classList.add("active");
     });
   });
-  
+
   // Set initial active state based on URL
   updateActiveNavLink();
 });
@@ -247,6 +247,17 @@ document.addEventListener("DOMContentLoaded", function () {
       if (data.role !== doctor) {
         const doctorSchedule = document.getElementById("doctorSchedule");
         if (doctorSchedule) doctorSchedule.style.display = "none";
+      }
+
+      // Appointment List: Show different pages based on role
+      // Admin/Staff/Doctor see appointment_list.html with table
+      // Patient sees patient_appointments.html
+      if ([admin, staff, doctor].includes(data.role)) {
+        const appointmentList = document.getElementById("appointmentList");
+        if (appointmentList) appointmentList.style.display = "none";
+      } else {
+        const appointmentListAdmin = document.getElementById("appointmentListAdmin");
+        if (appointmentListAdmin) appointmentListAdmin.style.display = "none";
       }
     })
     .catch((error) => {
