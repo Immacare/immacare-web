@@ -204,6 +204,29 @@ function patientViewHistory(user_id_val) {
       ],
     });
   }
+
+  const recommendationsViewEl = document.getElementById("recommendationsView");
+  if (recommendationsViewEl && $.fn.DataTable) {
+    $("#recommendationsView").DataTable({
+      searching: false,
+      responsive: true,
+      lengthChange: false,
+      ajax: {
+        url: "/getConsultationDetails",
+        dataSrc: "data",
+        data: function (d) {
+          d.user_id = userId =
+            userId === null || userId === "" ? user_id_val : userId;
+        },
+      },
+      columns: [
+        { data: "consultation_date" },
+        { data: "recommendation", defaultContent: "None" },
+        { data: "follow_up", defaultContent: "No" },
+        { data: "prescription", defaultContent: "None" },
+      ],
+    });
+  }
 }
 
 $(document).on("click", ".get-user-btn", function () {

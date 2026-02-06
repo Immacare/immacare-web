@@ -8,16 +8,16 @@ let initialized = false;
 function initAuditLogs() {
   if (initialized) return;
   initialized = true;
-  
+
   console.log('[AUDIT UI] Initializing audit logs page...');
-  
+
   // Set default date range (last 30 days) - use local date format
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1); // Include today fully
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
+
   // Format dates as YYYY-MM-DD for input fields
   const formatDate = (d) => {
     const year = d.getFullYear();
@@ -25,17 +25,17 @@ function initAuditLogs() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
-  
+
   $('#endDate').val(formatDate(tomorrow));
   $('#startDate').val(formatDate(thirtyDaysAgo));
-  
+
   console.log('[AUDIT UI] Date range:', formatDate(thirtyDaysAgo), 'to', formatDate(tomorrow));
-  
+
   loadAuditLogs();
 }
 
 // Try both document ready and immediate execution for iframe compatibility
-$(document).ready(function() {
+$(document).ready(function () {
   initAuditLogs();
 });
 
@@ -49,41 +49,42 @@ function loadAuditLogs() {
   const action = $('#actionFilter').val();
   const startDate = $('#startDate').val();
   const endDate = $('#endDate').val();
-  
+
   // Build URL without date filters first to ensure we get data
   let url = '/audit-logs?limit=500';
   if (action && action !== 'all') url += `&action=${action}`;
   if (startDate) url += `&startDate=${startDate}`;
   if (endDate) url += `&endDate=${endDate}`;
-  
+
   console.log('[AUDIT UI] Fetching logs from:', url);
-  
+
   $.ajax({
     url: url,
     method: 'GET',
     dataType: 'json',
-    success: function(response) {
+    success: function (response) {
       console.log('[AUDIT UI] Response received:', response);
       if (response && response.success && response.data) {
         allLogs = response.data;
         console.log('[AUDIT UI] Loaded', response.data.length, 'logs');
         renderTable(response.data);
-        updateSummary(response.data);
+        // Use totalCounts from API response for accurate summary (not limited by pagination)
+        updateSummary(response.totalCounts || {});
       } else {
         console.log('[AUDIT UI] No data in response or success=false');
         console.log('[AUDIT UI] Full response:', JSON.stringify(response));
         // Show empty state
         renderTable([]);
-        updateSummary([]);
+        updateSummary({});
       }
     },
-    error: function(xhr, status, error) {
+    error: function (xhr, status, error) {
       console.error('[AUDIT UI] Failed to load audit logs:', status, error);
       console.error('[AUDIT UI] Status code:', xhr.status);
       console.error('[AUDIT UI] Response:', xhr.responseText);
       // Show empty state on error
       renderTable([]);
-      updateSummary([]);
+      updateSummary({});
     }
   });
 }
@@ -94,10 +95,10 @@ function renderTable(logs) {
   if (auditTable) {
     auditTable.destroy();
   }
-  
+
   const tbody = $('#auditLogsBody');
   tbody.empty();
-  
+
   logs.forEach(log => {
     const logDate = new Date(log.createdAt);
     const dateTime = logDate.toLocaleString('en-PH', {
@@ -109,10 +110,10 @@ function renderTable(logs) {
     });
     // Use timestamp for proper sorting
     const sortValue = logDate.getTime();
-    
+
     const activityBadge = getActivityBadge(log.action);
     const roleBadge = getRoleBadge(log.userRole);
-    
+
     tbody.append(`
       <tr>
         <td data-order="${sortValue}">${dateTime}</td>
@@ -124,7 +125,7 @@ function renderTable(logs) {
       </tr>
     `);
   });
-  
+
   // Initialize DataTable with proper date sorting
   auditTable = $('#auditLogsTable').DataTable({
     order: [[0, 'desc']],
@@ -146,16 +147,16 @@ function getActivityBadge(action) {
     'register': 'bi-person-plus',
     'booking_created': 'bi-calendar-check'
   };
-  
+
   const labels = {
     'login': 'Login',
     'register': 'Registration',
     'booking_created': 'Booking Created'
   };
-  
+
   const icon = icons[action] || 'bi-activity';
   const label = labels[action] || action;
-  
+
   return `<span class="activity-badge ${action}"><i class="bi ${icon}"></i>${label}</span>`;
 }
 
@@ -165,12 +166,12 @@ function getRoleBadge(role) {
   return `<span class="role-badge ${role.toLowerCase()}">${role}</span>`;
 }
 
-// Update summary counts
-function updateSummary(logs) {
-  const loginCount = logs.filter(l => l.action === 'login').length;
-  const registerCount = logs.filter(l => l.action === 'register').length;
-  const bookingCount = logs.filter(l => l.action === 'booking_created').length;
-  
+// Update summary counts using totalCounts from API response
+function updateSummary(totalCounts) {
+  const loginCount = totalCounts.login || 0;
+  const registerCount = totalCounts.register || 0;
+  const bookingCount = totalCounts.booking_created || 0;
+
   $('#loginCount').text(loginCount);
   $('#registerCount').text(registerCount);
   $('#bookingCount').text(bookingCount);
@@ -179,14 +180,14 @@ function updateSummary(logs) {
 // Clear filters
 function clearFilters() {
   $('#actionFilter').val('all');
-  
+
   const today = new Date();
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
+
   $('#endDate').val(today.toISOString().split('T')[0]);
   $('#startDate').val(thirtyDaysAgo.toISOString().split('T')[0]);
-  
+
   loadAuditLogs();
 }
 
@@ -195,7 +196,7 @@ function printAuditLogs() {
   // Get current user info for print header (role and full name)
   let userRole = 'Unknown';
   let userFullName = 'Unknown';
-  
+
   // Try to get user info from parent window (iframe context)
   try {
     if (window.parent && window.parent !== window) {
@@ -208,8 +209,8 @@ function printAuditLogs() {
         userRole = parentRole.value.charAt(0).toUpperCase() + parentRole.value.slice(1);
       }
     }
-  } catch (e) {}
-  
+  } catch (e) { }
+
   // Fallback to localStorage if parent window didn't work
   if (userFullName === 'Unknown') {
     const sessionData = localStorage.getItem('sessionUser');
@@ -218,14 +219,14 @@ function printAuditLogs() {
         const user = JSON.parse(sessionData);
         userFullName = `${user.firstname || ''} ${user.lastname || ''}`.trim() || 'Unknown';
         userRole = user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Unknown';
-      } catch (e) {}
+      } catch (e) { }
     }
   }
-  
+
   const startDate = $('#startDate').val() || 'N/A';
   const endDate = $('#endDate').val() || 'N/A';
   const actionFilter = $('#actionFilter option:selected').text();
-  
+
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
     <!DOCTYPE html>
@@ -339,10 +340,10 @@ let allInventoryTransactions = [];
 let searchTimeout = null;
 
 // Load inventory transactions when tab is shown
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   const inventoryTab = document.getElementById('inventory-tab');
   if (inventoryTab) {
-    inventoryTab.addEventListener('shown.bs.tab', function() {
+    inventoryTab.addEventListener('shown.bs.tab', function () {
       if (!inventoryTable) {
         loadInventoryTransactions();
       }
@@ -362,20 +363,20 @@ function loadInventoryTransactions() {
   const startDate = $('#invStartDate').val();
   const endDate = $('#invEndDate').val();
   const search = $('#invSearch').val();
-  
+
   let url = '/api/inventory-transactions?limit=500';
   if (transactionType && transactionType !== 'all') url += `&transactionType=${transactionType}`;
   if (startDate) url += `&startDate=${startDate}`;
   if (endDate) url += `&endDate=${endDate}`;
   if (search) url += `&search=${encodeURIComponent(search)}`;
-  
+
   console.log('[INVENTORY AUDIT] Fetching transactions from:', url);
-  
+
   $.ajax({
     url: url,
     method: 'GET',
     dataType: 'json',
-    success: function(response) {
+    success: function (response) {
       console.log('[INVENTORY AUDIT] Response received:', response);
       if (response && response.success && response.data) {
         allInventoryTransactions = response.data;
@@ -388,7 +389,7 @@ function loadInventoryTransactions() {
         updateInventorySummary([]);
       }
     },
-    error: function(xhr, status, error) {
+    error: function (xhr, status, error) {
       console.error('[INVENTORY AUDIT] Failed to load transactions:', status, error);
       renderInventoryTable([]);
       updateInventorySummary([]);
@@ -401,10 +402,10 @@ function renderInventoryTable(transactions) {
   if (inventoryTable) {
     inventoryTable.destroy();
   }
-  
+
   const tbody = $('#inventoryTransactionsBody');
   tbody.empty();
-  
+
   transactions.forEach(tx => {
     const txDate = new Date(tx.createdAt);
     const dateTime = txDate.toLocaleString('en-PH', {
@@ -415,12 +416,12 @@ function renderInventoryTable(transactions) {
       minute: '2-digit'
     });
     const sortValue = txDate.getTime();
-    
+
     const typeBadge = getTransactionTypeBadge(tx.transactionType);
     const changeClass = tx.quantityChange >= 0 ? 'text-success' : 'text-danger';
     const changePrefix = tx.quantityChange >= 0 ? '+' : '';
     const userName = tx.performedBy?.userName || 'System';
-    
+
     tbody.append(`
       <tr>
         <td data-order="${sortValue}">${dateTime}</td>
@@ -430,13 +431,13 @@ function renderInventoryTable(transactions) {
         <td class="text-center">${tx.quantityBefore}</td>
         <td class="text-center ${changeClass}"><strong>${changePrefix}${tx.quantityChange}</strong></td>
         <td class="text-center">${tx.quantityAfter}</td>
-        <td class="text-end">₱${(tx.totalValue || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+        <td class="text-end">₱${(tx.totalValue || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
         <td>${escapeHtml(userName)}</td>
         <td>${escapeHtml(tx.notes || '-')}</td>
       </tr>
     `);
   });
-  
+
   inventoryTable = $('#inventoryTransactionsTable').DataTable({
     order: [[0, 'desc']],
     pageLength: 25,
@@ -464,7 +465,7 @@ function getTransactionTypeBadge(type) {
     'initial': { class: 'bg-dark', icon: 'bi-plus-circle', label: 'Initial' },
     'correction': { class: 'bg-warning text-dark', icon: 'bi-pencil-square', label: 'Correction' }
   };
-  
+
   const badge = badges[type] || { class: 'bg-secondary', icon: 'bi-question', label: type };
   return `<span class="badge ${badge.class}"><i class="bi ${badge.icon} me-1"></i>${badge.label}</span>`;
 }
@@ -474,7 +475,7 @@ function updateInventorySummary(transactions) {
   const salesCount = transactions.filter(t => t.transactionType === 'sale').length;
   const restockCount = transactions.filter(t => t.transactionType === 'restock').length;
   const adjustmentCount = transactions.filter(t => t.transactionType === 'adjustment' || t.transactionType === 'correction').length;
-  
+
   $('#salesCount').text(salesCount);
   $('#restockCount').text(restockCount);
   $('#adjustmentCount').text(adjustmentCount);
@@ -495,7 +496,7 @@ function exportInventoryTransactions() {
     alert('No transactions to export');
     return;
   }
-  
+
   const headers = ['Date', 'Item', 'Category', 'Type', 'Qty Before', 'Change', 'Qty After', 'Value', 'Performed By', 'Notes'];
   const rows = allInventoryTransactions.map(tx => [
     new Date(tx.createdAt).toLocaleString(),
@@ -509,12 +510,12 @@ function exportInventoryTransactions() {
     tx.performedBy?.userName || 'System',
     tx.notes || ''
   ]);
-  
+
   let csv = headers.join(',') + '\n';
   rows.forEach(row => {
     csv += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',') + '\n';
   });
-  
+
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -538,7 +539,7 @@ function printCurrentTab() {
 function printInventoryTransactions() {
   let userRole = 'Unknown';
   let userFullName = 'Unknown';
-  
+
   try {
     if (window.parent && window.parent !== window) {
       const parentUsername = window.parent.document.getElementById('usernameDisplay');
@@ -546,8 +547,8 @@ function printInventoryTransactions() {
       if (parentUsername) userFullName = parentUsername.textContent.trim();
       if (parentRole) userRole = parentRole.value.charAt(0).toUpperCase() + parentRole.value.slice(1);
     }
-  } catch (e) {}
-  
+  } catch (e) { }
+
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
     <!DOCTYPE html>

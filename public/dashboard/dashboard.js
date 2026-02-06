@@ -125,7 +125,7 @@ $(document).ready(function () {
   // LOAD DASHBOARD STATISTICS
   // ============================================================================
   // These AJAX calls fetch and display key statistics on the dashboard
-  
+
   // Load total booked appointments count
   $.get("/appointment-count", function (data) {
     $("#appointmentCount").text(data.total_booked);
@@ -182,11 +182,8 @@ $(document).ready(function () {
     console.error("Error loading doctor count");
   });
 
-  // Check if user is admin and load predictive analytics
+  // Check if user is admin/staff and load predictive analytics and inventory transactions
   checkAdminAndLoadAnalytics();
-  
-  // Load recent inventory transactions
-  loadRecentInventoryTransactions();
 });
 
 // ============================================================================
@@ -199,9 +196,10 @@ let dashboardHealthChart = null;
 
 /**
  * Check if user is admin and load analytics if so
+ * Also controls visibility of inventory transactions section based on role
  */
 function checkAdminAndLoadAnalytics() {
-  $.get("/homepage", function(data) {
+  $.get("/homepage", function (data) {
     if (data.role === 'admin') {
       // Show the predictive analytics section
       const analyticsSection = document.getElementById('predictiveAnalyticsSection');
@@ -211,7 +209,17 @@ function checkAdminAndLoadAnalytics() {
       // Load the charts
       loadDashboardAnalytics();
     }
-  }).fail(function() {
+
+    // Show inventory transactions section for admin and staff only (not for doctors)
+    if (data.role === 'admin' || data.role === 'staff') {
+      const inventorySection = document.getElementById('inventoryTransactionsSection');
+      if (inventorySection) {
+        inventorySection.style.display = 'block';
+      }
+      // Load the transactions data
+      loadRecentInventoryTransactions();
+    }
+  }).fail(function () {
     console.error("Error checking user role for analytics");
   });
 }
@@ -232,11 +240,11 @@ function loadDashboardAppointmentChart() {
   const ctx = document.getElementById('dashboardAppointmentChart');
   if (!ctx) return;
 
-  $.get("/analytics/appointment-forecast", function(data) {
+  $.get("/analytics/appointment-forecast", function (data) {
     if (data.success) {
       renderDashboardAppointmentChart(ctx, data.data);
     }
-  }).fail(function() {
+  }).fail(function () {
     // Show placeholder if data unavailable
     renderPlaceholderChart(ctx, 'Appointment Data');
   });
@@ -299,11 +307,11 @@ function loadDashboardInventoryChart() {
   const ctx = document.getElementById('dashboardInventoryChart');
   if (!ctx) return;
 
-  $.get("/analytics/inventory-forecast", function(data) {
+  $.get("/analytics/inventory-forecast", function (data) {
     if (data.success) {
       renderDashboardInventoryChart(ctx, data.data);
     }
-  }).fail(function() {
+  }).fail(function () {
     renderPlaceholderChart(ctx, 'Inventory Data');
   });
 }
@@ -361,11 +369,11 @@ function loadDashboardHealthChart() {
   const ctx = document.getElementById('dashboardHealthChart');
   if (!ctx) return;
 
-  $.get("/analytics/health-risk-analysis", function(data) {
+  $.get("/analytics/health-risk-analysis", function (data) {
     if (data.success) {
       renderDashboardHealthChart(ctx, data.data);
     }
-  }).fail(function() {
+  }).fail(function () {
     renderPlaceholderChart(ctx, 'Patient Data');
   });
 }
@@ -640,26 +648,26 @@ function loadRecentInventoryTransactions() {
     method: "GET",
     data: { limit: 10 },
     dataType: "json",
-    success: function(response) {
+    success: function (response) {
       const tbody = $("#inventoryTransactionsBody");
       tbody.empty();
-      
+
       if (response.success && response.data && response.data.length > 0) {
-        response.data.forEach(function(tx) {
+        response.data.forEach(function (tx) {
           const date = new Date(tx.createdAt);
           const formattedDate = date.toLocaleDateString('en-US', {
             month: 'short', day: 'numeric', year: 'numeric'
           }) + ', ' + date.toLocaleTimeString('en-US', {
             hour: 'numeric', minute: '2-digit', hour12: true
           });
-          
+
           // Determine badge color based on transaction type
           let typeBadge = 'bg-secondary';
           if (tx.transactionType === 'sale') typeBadge = 'bg-primary';
           else if (tx.transactionType === 'restock') typeBadge = 'bg-success';
           else if (tx.transactionType === 'adjustment') typeBadge = 'bg-warning text-dark';
           else if (tx.transactionType === 'waste') typeBadge = 'bg-danger';
-          
+
           // Format quantity change
           let changeText = tx.quantityChange || 0;
           let changeClass = '';
@@ -669,7 +677,7 @@ function loadRecentInventoryTransactions() {
           } else if (changeText < 0) {
             changeClass = 'text-danger fw-bold';
           }
-          
+
           const row = `
             <tr>
               <td>${formattedDate}</td>
@@ -687,7 +695,7 @@ function loadRecentInventoryTransactions() {
         tbody.html('<tr><td colspan="7" class="text-center text-muted py-3">No recent transactions</td></tr>');
       }
     },
-    error: function(xhr, status, error) {
+    error: function (xhr, status, error) {
       console.error("Error loading inventory transactions:", error);
       $("#inventoryTransactionsBody").html('<tr><td colspan="7" class="text-center text-danger py-3">Error loading transactions</td></tr>');
     }
@@ -698,15 +706,15 @@ function loadRecentInventoryTransactions() {
  * Print the current dashboard table
  */
 function printDashboardTable() {
-  const table = $.fn.DataTable.isDataTable("#dashboardTable") 
-    ? $("#dashboardTable").DataTable() 
+  const table = $.fn.DataTable.isDataTable("#dashboardTable")
+    ? $("#dashboardTable").DataTable()
     : null;
-    
+
   if (table && table.data().count() > 0) {
     const columns = table.columns().header().toArray();
     const headers = columns.map(col => $(col).text());
     const dataKeys = table.settings().init().columns.map(col => col.data);
-    
+
     printDataTable(
       table,
       'Dashboard Report',

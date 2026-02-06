@@ -2201,7 +2201,7 @@ app.use("/jquery", express.static(__dirname + "/node_modules/jquery/dist"));
 // IMPORTANT: This must be AFTER static file serving so CSS/JS files are served correctly
 app.get('/landingpage/:slug', (req, res) => {
   const slug = req.params.slug;
-  
+
   // Serve the dynamic service detail template
   const templatePath = path.join(__dirname, "public", "landingpage", "service_detail.html");
   if (fs.existsSync(templatePath)) {
@@ -2979,15 +2979,15 @@ Provide recommendations for proactive patient care, follow-up scheduling, and pr
 app.get("/doctor-schedules", async (req, res) => {
   try {
     const { doctorId } = req.query;
-    
+
     if (!doctorId) {
       return res.status(400).json({ message: "Doctor ID is required" });
     }
-    
+
     const schedules = await DoctorSchedule.find({ doctorId })
       .sort({ scheduleDate: 1 })
       .lean();
-    
+
     res.json({ success: true, data: schedules });
   } catch (error) {
     console.error("Get doctor schedules error:", error);
@@ -3002,13 +3002,13 @@ app.get("/doctor-schedules", async (req, res) => {
 app.post("/doctor-schedule", async (req, res) => {
   try {
     const { doctorId, scheduleDate, timeSlots, isAvailable, maxPatients, notes } = req.body;
-    
+
     if (!doctorId || !scheduleDate) {
       return res.status(400).json({ message: "Doctor ID and schedule date are required" });
     }
-    
+
     let schedule = await DoctorSchedule.findOne({ doctorId, scheduleDate });
-    
+
     if (schedule) {
       schedule.timeSlots = timeSlots || schedule.timeSlots;
       schedule.isAvailable = isAvailable !== undefined ? isAvailable : schedule.isAvailable;
@@ -3026,7 +3026,7 @@ app.post("/doctor-schedule", async (req, res) => {
       });
       await schedule.save();
     }
-    
+
     res.json({ success: true, message: "Schedule saved successfully", data: schedule });
   } catch (error) {
     console.error("Save doctor schedule error:", error);
@@ -3045,13 +3045,13 @@ app.post("/doctor-schedule", async (req, res) => {
 app.get("/audit-logs", async (req, res) => {
   try {
     const { action, startDate, endDate, limit = 100 } = req.query;
-    
+
     let query = {};
-    
+
     if (action && action !== 'all') {
       query.action = action;
     }
-    
+
     if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) {
@@ -3063,12 +3063,35 @@ app.get("/audit-logs", async (req, res) => {
         query.createdAt.$lte = end;
       }
     }
-    
+
+    // Get the logs (with limit for display)
     const logs = await AuditLog.find(query)
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .lean();
-    
+
+    // Get total counts for each action type (without limit, for accurate summary)
+    // Build a base query for date filtering (without action filter)
+    let countQuery = {};
+    if (startDate || endDate) {
+      countQuery.createdAt = {};
+      if (startDate) {
+        countQuery.createdAt.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        countQuery.createdAt.$lte = end;
+      }
+    }
+
+    // Count each action type
+    const [loginCount, registerCount, bookingCount] = await Promise.all([
+      AuditLog.countDocuments({ ...countQuery, action: 'login' }),
+      AuditLog.countDocuments({ ...countQuery, action: 'register' }),
+      AuditLog.countDocuments({ ...countQuery, action: 'booking_created' })
+    ]);
+
     const results = logs.map(log => ({
       id: log._id.toString(),
       action: log.action,
@@ -3079,8 +3102,16 @@ app.get("/audit-logs", async (req, res) => {
       metadata: log.metadata,
       createdAt: log.createdAt
     }));
-    
-    res.json({ success: true, data: results });
+
+    res.json({
+      success: true,
+      data: results,
+      totalCounts: {
+        login: loginCount,
+        register: registerCount,
+        booking_created: bookingCount
+      }
+    });
   } catch (error) {
     console.error("Get audit logs error:", error);
     return res.status(500).json({ success: false, message: "Database error" });
@@ -3095,17 +3126,17 @@ app.get("/audit-logs", async (req, res) => {
 app.get("/api/inventory-transactions", requireAdmin, async (req, res) => {
   try {
     const { transactionType, itemId, startDate, endDate, limit = 500, search } = req.query;
-    
+
     let query = {};
-    
+
     if (transactionType && transactionType !== 'all') {
       query.transactionType = transactionType;
     }
-    
+
     if (itemId) {
       query.inventoryId = itemId;
     }
-    
+
     if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) {
@@ -3117,7 +3148,7 @@ app.get("/api/inventory-transactions", requireAdmin, async (req, res) => {
         query.createdAt.$lte = end;
       }
     }
-    
+
     if (search) {
       query.$or = [
         { itemName: { $regex: search, $options: 'i' } },
@@ -3125,12 +3156,12 @@ app.get("/api/inventory-transactions", requireAdmin, async (req, res) => {
         { 'performedBy.userName': { $regex: search, $options: 'i' } }
       ];
     }
-    
+
     const transactions = await InventoryTransaction.find(query)
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .lean();
-    
+
     res.json({ success: true, data: transactions });
   } catch (error) {
     console.error("Get inventory transactions error:", error);
@@ -3146,7 +3177,7 @@ app.get("/api/inventory-transactions", requireAdmin, async (req, res) => {
 app.get("/api/inventory-transactions/summary", requireAdmin, async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    
+
     let matchQuery = {};
     if (startDate || endDate) {
       matchQuery.createdAt = {};
@@ -3159,7 +3190,7 @@ app.get("/api/inventory-transactions/summary", requireAdmin, async (req, res) =>
         matchQuery.createdAt.$lte = end;
       }
     }
-    
+
     const summary = await InventoryTransaction.aggregate([
       { $match: matchQuery },
       {
@@ -3171,7 +3202,7 @@ app.get("/api/inventory-transactions/summary", requireAdmin, async (req, res) =>
         }
       }
     ]);
-    
+
     const topItems = await InventoryTransaction.aggregate([
       { $match: matchQuery },
       {
@@ -3185,9 +3216,9 @@ app.get("/api/inventory-transactions/summary", requireAdmin, async (req, res) =>
       { $sort: { transactionCount: -1 } },
       { $limit: 10 }
     ]);
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       data: { byType: summary, topItems: topItems }
     });
   } catch (error) {
@@ -3205,12 +3236,12 @@ app.get("/api/inventory-transactions/item/:itemId", requireAdmin, async (req, re
   try {
     const { itemId } = req.params;
     const { limit = 100 } = req.query;
-    
+
     const transactions = await InventoryTransaction.find({ inventoryId: itemId })
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
       .lean();
-    
+
     res.json({ success: true, data: transactions });
   } catch (error) {
     console.error("Get item transactions error:", error);
@@ -3225,34 +3256,34 @@ app.get("/api/inventory-transactions/item/:itemId", requireAdmin, async (req, re
  */
 app.post("/api/inventory-transactions", requireAdmin, async (req, res) => {
   try {
-    const { 
-      inventoryId, 
-      transactionType, 
-      quantityChange, 
+    const {
+      inventoryId,
+      transactionType,
+      quantityChange,
       notes,
-      unitPrice 
+      unitPrice
     } = req.body;
-    
+
     if (!inventoryId || !transactionType || quantityChange === undefined) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Missing required fields: inventoryId, transactionType, quantityChange' 
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: inventoryId, transactionType, quantityChange'
       });
     }
-    
+
     // Get the inventory item
     const item = await Inventory.findById(inventoryId).populate('category', 'category');
     if (!item) {
       return res.status(404).json({ success: false, message: 'Inventory item not found' });
     }
-    
+
     const quantityBefore = item.actual_stock || 0;
     const quantityAfter = quantityBefore + quantityChange;
-    
+
     // Update the inventory item
     item.actual_stock = Math.max(0, quantityAfter);
     item.quantity = item.actual_stock;
-    
+
     // Update status
     if (item.actual_stock <= 0) {
       item.status = 'Out of Stock';
@@ -3261,9 +3292,9 @@ app.post("/api/inventory-transactions", requireAdmin, async (req, res) => {
     } else {
       item.status = 'In Stock';
     }
-    
+
     await item.save();
-    
+
     // Create the transaction record
     const transaction = await InventoryTransaction.create({
       inventoryId: item._id,
@@ -3286,11 +3317,11 @@ app.post("/api/inventory-transactions", requireAdmin, async (req, res) => {
       notes: notes || '',
       ipAddress: req.ip
     });
-    
-    res.json({ 
-      success: true, 
-      data: transaction, 
-      message: 'Transaction recorded successfully' 
+
+    res.json({
+      success: true,
+      data: transaction,
+      message: 'Transaction recorded successfully'
     });
   } catch (error) {
     console.error("Create inventory transaction error:", error);
@@ -3327,15 +3358,15 @@ app.get('/api/landing-services', async (req, res) => {
  */
 app.get('/api/landing-services/:slug', async (req, res) => {
   try {
-    const service = await LandingService.findOne({ 
+    const service = await LandingService.findOne({
       slug: req.params.slug,
-      isActive: true 
+      isActive: true
     }).lean();
-    
+
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
-    
+
     res.json({ success: true, data: service });
   } catch (error) {
     console.error('Error fetching landing service:', error);
@@ -3368,11 +3399,11 @@ app.get('/api/admin/landing-services', requireAdmin, async (req, res) => {
 app.get('/api/admin/landing-services/:id', requireAdmin, async (req, res) => {
   try {
     const service = await LandingService.findById(req.params.id).lean();
-    
+
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
-    
+
     res.json({ success: true, data: service });
   } catch (error) {
     console.error('Error fetching landing service:', error);
@@ -3388,16 +3419,16 @@ app.get('/api/admin/landing-services/:id', requireAdmin, async (req, res) => {
 app.post('/api/admin/landing-services', requireAdmin, async (req, res) => {
   try {
     const { title, slug, cardImage, bannerImage, description, sections, displayOrder, isActive } = req.body;
-    
+
     if (!title || !slug || !cardImage || !bannerImage || !description) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
-    
+
     const existingService = await LandingService.findOne({ slug: slug.toLowerCase() });
     if (existingService) {
       return res.status(400).json({ success: false, message: 'A service with this slug already exists' });
     }
-    
+
     const newService = new LandingService({
       title,
       slug: slug.toLowerCase(),
@@ -3408,9 +3439,9 @@ app.post('/api/admin/landing-services', requireAdmin, async (req, res) => {
       displayOrder: displayOrder || 0,
       isActive: isActive !== undefined ? isActive : true
     });
-    
+
     await newService.save();
-    
+
     await AuditLog.create({
       userId: req.session.userId,
       userName: `${req.session.firstname} ${req.session.lastname}`,
@@ -3420,7 +3451,7 @@ app.post('/api/admin/landing-services', requireAdmin, async (req, res) => {
       details: `Created landing service: ${title}`,
       ipAddress: req.ip
     });
-    
+
     res.json({ success: true, data: newService, message: 'Service created successfully' });
   } catch (error) {
     console.error('Error creating landing service:', error);
@@ -3436,14 +3467,14 @@ app.post('/api/admin/landing-services', requireAdmin, async (req, res) => {
 app.put('/api/admin/landing-services/:id', requireAdmin, async (req, res) => {
   try {
     const { title, slug, cardImage, bannerImage, description, sections, displayOrder, isActive } = req.body;
-    
+
     const service = await LandingService.findById(req.params.id);
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
-    
+
     if (slug && slug.toLowerCase() !== service.slug) {
-      const existingService = await LandingService.findOne({ 
+      const existingService = await LandingService.findOne({
         slug: slug.toLowerCase(),
         _id: { $ne: req.params.id }
       });
@@ -3451,7 +3482,7 @@ app.put('/api/admin/landing-services/:id', requireAdmin, async (req, res) => {
         return res.status(400).json({ success: false, message: 'A service with this slug already exists' });
       }
     }
-    
+
     if (title) service.title = title;
     if (slug) service.slug = slug.toLowerCase();
     if (cardImage) service.cardImage = cardImage;
@@ -3471,9 +3502,9 @@ app.put('/api/admin/landing-services/:id', requireAdmin, async (req, res) => {
     }
     if (displayOrder !== undefined) service.displayOrder = displayOrder;
     if (isActive !== undefined) service.isActive = isActive;
-    
+
     await service.save();
-    
+
     await AuditLog.create({
       userId: req.session.userId,
       userName: `${req.session.firstname} ${req.session.lastname}`,
@@ -3483,7 +3514,7 @@ app.put('/api/admin/landing-services/:id', requireAdmin, async (req, res) => {
       details: `Updated landing service: ${service.title}`,
       ipAddress: req.ip
     });
-    
+
     res.json({ success: true, data: service, message: 'Service updated successfully' });
   } catch (error) {
     console.error('Error updating landing service:', error);
@@ -3502,10 +3533,10 @@ app.delete('/api/admin/landing-services/:id', requireAdmin, async (req, res) => 
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
-    
+
     const serviceTitle = service.title;
     await LandingService.findByIdAndDelete(req.params.id);
-    
+
     await AuditLog.create({
       userId: req.session.userId,
       userName: `${req.session.firstname} ${req.session.lastname}`,
@@ -3515,7 +3546,7 @@ app.delete('/api/admin/landing-services/:id', requireAdmin, async (req, res) => 
       details: `Deleted landing service: ${serviceTitle}`,
       ipAddress: req.ip
     });
-    
+
     res.json({ success: true, message: 'Service deleted successfully' });
   } catch (error) {
     console.error('Error deleting landing service:', error);
@@ -3534,10 +3565,10 @@ app.put('/api/admin/landing-services/:id/toggle-status', requireAdmin, async (re
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
-    
+
     service.isActive = !service.isActive;
     await service.save();
-    
+
     await AuditLog.create({
       userId: req.session.userId,
       userName: `${req.session.firstname} ${req.session.lastname}`,
@@ -3547,7 +3578,7 @@ app.put('/api/admin/landing-services/:id/toggle-status', requireAdmin, async (re
       details: `${service.isActive ? 'Activated' : 'Deactivated'} landing service: ${service.title}`,
       ipAddress: req.ip
     });
-    
+
     res.json({ success: true, data: service, message: `Service ${service.isActive ? 'activated' : 'deactivated'} successfully` });
   } catch (error) {
     console.error('Error toggling landing service status:', error);
@@ -5082,70 +5113,34 @@ app.get("/getPatientRecommendations/:userId", async (req, res) => {
     }
 
     // Get appointments with recommendations
-    const appointments = await Appointment.find({ 
+    const appointments = await Appointment.find({
       patientId: patientProfile._id,
       recommendation: { $exists: true, $ne: '' }
     })
       .populate('doctorId', 'firstname lastname')
-        .sort({ bookingDate: -1 })
-        .lean();
+      .sort({ bookingDate: -1 })
+      .lean();
 
-      const results = appointments.map(apt => ({
-        date: apt.bookingDate || 'N/A',
-        doctor_name: apt.doctorId ? `Dr. ${apt.doctorId.firstname} ${apt.doctorId.lastname}` : 'N/A',
-        recommendation: apt.recommendation || 'N/A',
-        prescription: apt.prescription || 'N/A',
-        follow_up: apt.followUp || 'N/A'
-      }));
+    const results = appointments.map(apt => ({
+      date: apt.bookingDate || 'N/A',
+      doctor_name: apt.doctorId ? `Dr. ${apt.doctorId.firstname} ${apt.doctorId.lastname}` : 'N/A',
+      recommendation: apt.recommendation || 'N/A',
+      prescription: apt.prescription || 'N/A',
+      follow_up: apt.followUp || 'N/A'
+    }));
 
-      res.json({ data: results });
-    } catch (error) {
-      console.error("Get patient recommendations error:", error);
-      return res.status(500).json({ message: "Database error" });
-    }
-  });
+    res.json({ data: results });
+  } catch (error) {
+    console.error("Get patient recommendations error:", error);
+    return res.status(500).json({ message: "Database error" });
+  }
+});
 
-  /**
-   * GET /getPatientConsultationHistory/:userId
-   * Purpose: Get consultation history for a specific patient (completed appointments)
-   */
-  app.get("/getPatientConsultationHistory/:userId", async (req, res) => {
-    try {
-      const { userId } = req.params;
-
-      const patientProfile = await PatientProfile.findOne({ userId: userId }).lean();
-      if (!patientProfile) {
-        return res.json({ data: [] });
-      }
-
-      const appointments = await Appointment.find({ 
-        patientId: patientProfile._id,
-        status: 'Completed'
-      })
-        .populate('doctorId', 'firstname lastname')
-        .sort({ bookingDate: -1 })
-        .lean();
-
-      const results = appointments.map(apt => ({
-        date: apt.bookingDate || 'N/A',
-        consultation_type: apt.consultationType || 'N/A',
-        doctor_name: apt.doctorId ? `Dr. ${apt.doctorId.firstname} ${apt.doctorId.lastname}` : 'N/A',
-        follow_up: apt.followUp || 'N/A',
-        status: apt.status || 'Completed'
-      }));
-
-      res.json({ data: results });
-    } catch (error) {
-      console.error("Get patient consultation history error:", error);
-      return res.status(500).json({ message: "Database error" });
-    }
-  });
-
-  /**
-   * GET /getPatientPrescriptions/:userId
-   * Purpose: Get prescriptions for a specific patient
-   */
-  app.get("/getPatientPrescriptions/:userId", async (req, res) => {
+/**
+ * GET /getPatientConsultationHistory/:userId
+ * Purpose: Get consultation history for a specific patient (completed appointments)
+ */
+app.get("/getPatientConsultationHistory/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -5154,7 +5149,43 @@ app.get("/getPatientRecommendations/:userId", async (req, res) => {
       return res.json({ data: [] });
     }
 
-    const appointments = await Appointment.find({ 
+    const appointments = await Appointment.find({
+      patientId: patientProfile._id,
+      status: 'Completed'
+    })
+      .populate('doctorId', 'firstname lastname')
+      .sort({ bookingDate: -1 })
+      .lean();
+
+    const results = appointments.map(apt => ({
+      date: apt.bookingDate || 'N/A',
+      consultation_type: apt.consultationType || 'N/A',
+      doctor_name: apt.doctorId ? `Dr. ${apt.doctorId.firstname} ${apt.doctorId.lastname}` : 'N/A',
+      follow_up: apt.followUp || 'N/A',
+      status: apt.status || 'Completed'
+    }));
+
+    res.json({ data: results });
+  } catch (error) {
+    console.error("Get patient consultation history error:", error);
+    return res.status(500).json({ message: "Database error" });
+  }
+});
+
+/**
+ * GET /getPatientPrescriptions/:userId
+ * Purpose: Get prescriptions for a specific patient
+ */
+app.get("/getPatientPrescriptions/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const patientProfile = await PatientProfile.findOne({ userId: userId }).lean();
+    if (!patientProfile) {
+      return res.json({ data: [] });
+    }
+
+    const appointments = await Appointment.find({
       patientId: patientProfile._id,
       prescription: { $exists: true, $ne: '' }
     })
@@ -5163,7 +5194,7 @@ app.get("/getPatientRecommendations/:userId", async (req, res) => {
       .lean();
 
     const results = [];
-    
+
     appointments.forEach(apt => {
       // Parse prescription if it's a JSON string (array of medicines)
       let prescriptions = [];
@@ -6311,9 +6342,9 @@ app.post("/pos/updateStock", async (req, res) => {
 app.get("/getInventoryHistory", async (req, res) => {
   try {
     const { startDate, endDate, month, year } = req.query;
-    
+
     let targetDate = null;
-    
+
     if (startDate && endDate) {
       // Use the end date as the target - get latest snapshot on or before this date
       targetDate = new Date(endDate + 'T23:59:59.999');
@@ -6329,20 +6360,22 @@ app.get("/getInventoryHistory", async (req, res) => {
       // Get end of the selected month
       targetDate = new Date(targetYear, monthNum, 0, 23, 59, 59, 999);
     }
-    
+
     // Get the latest snapshot for each inventory item ON OR BEFORE the target date
     const query = targetDate ? { snapshotDate: { $lte: targetDate } } : {};
-    
+
     const history = await InventoryHistory.aggregate([
       { $match: query },
       { $sort: { snapshotDate: -1 } },
-      { $group: {
-        _id: "$inventoryId",
-        latestSnapshot: { $first: "$$ROOT" }
-      }},
+      {
+        $group: {
+          _id: "$inventoryId",
+          latestSnapshot: { $first: "$$ROOT" }
+        }
+      },
       { $replaceRoot: { newRoot: "$latestSnapshot" } }
     ]);
-    
+
     const results = history.map(h => ({
       id: h.inventoryId.toString(),
       item: h.item,
@@ -6359,7 +6392,7 @@ app.get("/getInventoryHistory", async (req, res) => {
       status: h.status,
       snapshotDate: h.snapshotDate
     }));
-    
+
     res.json({ success: true, data: results });
   } catch (error) {
     console.error("Get inventory history error:", error);
@@ -6371,7 +6404,7 @@ app.get("/getInventoryHistory", async (req, res) => {
 app.post("/initializeInventoryHistory", async (req, res) => {
   try {
     const items = await Inventory.find({}).populate('category', 'category').lean();
-    
+
     let createdCount = 0;
     for (const item of items) {
       // Check if this item already has a history entry
@@ -6398,7 +6431,7 @@ app.post("/initializeInventoryHistory", async (req, res) => {
         createdCount++;
       }
     }
-    
+
     res.json({ success: true, message: `Created ${createdCount} initial history snapshots` });
   } catch (error) {
     console.error("Initialize inventory history error:", error);
@@ -6410,11 +6443,11 @@ app.post("/initializeInventoryHistory", async (req, res) => {
 app.post("/seedInventoryHistoryData", async (req, res) => {
   try {
     const items = await Inventory.find({}).populate('category', 'category').lean();
-    
+
     // Create history entries for past 12 months
     const now = new Date();
     let createdCount = 0;
-    
+
     for (const item of items) {
       // Create entries for each month from Jan 2025 to current
       for (let monthsAgo = 12; monthsAgo >= 0; monthsAgo--) {
@@ -6422,21 +6455,21 @@ app.post("/seedInventoryHistoryData", async (req, res) => {
         snapshotDate.setMonth(snapshotDate.getMonth() - monthsAgo);
         snapshotDate.setDate(15); // Middle of month
         snapshotDate.setHours(12, 0, 0, 0);
-        
+
         // Simulate stock changes over time - higher stock in past, decreasing
         const stockMultiplier = 1 + (monthsAgo * 0.1); // 10% more stock per month ago
         const simulatedStock = Math.round((item.actual_stock || 10) * stockMultiplier);
         const simulatedQtyUsed = Math.round((item.qty_used || 0) * (1 - monthsAgo * 0.08));
-        
+
         // Check if entry already exists for this item and approximate date
         const startOfMonth = new Date(snapshotDate.getFullYear(), snapshotDate.getMonth(), 1);
         const endOfMonth = new Date(snapshotDate.getFullYear(), snapshotDate.getMonth() + 1, 0, 23, 59, 59);
-        
+
         const existing = await InventoryHistory.findOne({
           inventoryId: item._id,
           snapshotDate: { $gte: startOfMonth, $lte: endOfMonth }
         });
-        
+
         if (!existing) {
           await InventoryHistory.create({
             inventoryId: item._id,
@@ -6460,7 +6493,7 @@ app.post("/seedInventoryHistoryData", async (req, res) => {
         }
       }
     }
-    
+
     res.json({ success: true, message: `Created ${createdCount} historical snapshots for testing` });
   } catch (error) {
     console.error("Seed inventory history error:", error);
@@ -6708,11 +6741,11 @@ app.post("/updateInventoryField", async (req, res) => {
     try {
       const categoryName = item.category ? item.category.category : '';
       const stockChange = (field === 'actual_stock') ? (newValue - previousStock) : 0;
-      
+
       // Determine transaction type
       let transactionType = 'adjustment';
       let notes = `Field "${field}" changed from ${previousValue} to ${newValue}`;
-      
+
       if (field === 'actual_stock') {
         if (stockChange > 0) {
           transactionType = 'restock';
@@ -7325,6 +7358,7 @@ app.get("/getConsultationDetails", async (req, res) => {
         consultation_type: appointment.consultationType,
         recommendation: rec ? rec.recommendation : null,
         follow_up: rec ? rec.followUpRequired : null,
+        prescription: rec ? rec.prescription : null,
         doctor_fullname: appointment.doctorId ? `${appointment.doctorId.firstname} ${appointment.doctorId.lastname}` : '',
         consultation_status: appointment.status
       };
