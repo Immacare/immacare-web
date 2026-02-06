@@ -1,237 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Audit Logs - ImmaCare+</title>
-    <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="/bootstrap-icons/font/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
-    <script src="/jquery/jquery.min.js"></script>
-    <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    <link rel="stylesheet" href="audit_logs.css" />
-  </head>
 
-  <body>
-    <div class="container-fluid py-4">
-      <!-- Page Header -->
-      <div class="page-header mb-4">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <h2 class="mb-1"><i class="bi bi-journal-text me-2"></i>Audit Logs</h2>
-            <p class="text-muted mb-0">Track user activities and inventory transactions</p>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audit Logs - ImmaCare+</title>
+  <link rel="stylesheet" href="/bootstrap/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="/bootstrap-icons/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+  <script src="/jquery/jquery.min.js"></script>
+  <script src="/bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+  <link rel="stylesheet" href="audit_logs.css" />
+</head>
+
+<body>
+  <div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="page-header mb-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h2 class="mb-1"><i class="bi bi-journal-text me-2"></i>Audit Logs</h2>
+          <p class="text-muted mb-0">Track user activities and inventory transactions</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="printCurrentTab()" title="Print">
+          <i class="bi bi-printer"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs mb-4" id="auditTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="user-activity-tab" data-bs-toggle="tab" data-bs-target="#user-activity"
+          type="button" role="tab">
+          <i class="bi bi-people me-2"></i>User Activity
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory-transactions"
+          type="button" role="tab">
+          <i class="bi bi-box-seam me-2"></i>Inventory Transactions
+        </button>
+      </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="auditTabsContent">
+      <!-- User Activity Tab -->
+      <div class="tab-pane fade show active" id="user-activity" role="tabpanel">
+        <!-- Filters -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label">Activity Type</label>
+                <select id="actionFilter" class="form-select" onchange="loadAuditLogs()">
+                  <option value="all">All Activities</option>
+                  <option value="login">Logins</option>
+                  <option value="register">Registrations</option>
+                  <option value="booking_created">Bookings Created</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">From Date</label>
+                <input type="date" id="startDate" class="form-control" onchange="loadAuditLogs()">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">To Date</label>
+                <input type="date" id="endDate" class="form-control" onchange="loadAuditLogs()">
+              </div>
+              <div class="col-md-3">
+                <button class="btn btn-secondary w-100" onclick="clearFilters()">
+                  <i class="bi bi-x-circle me-2"></i>Clear Filters
+                </button>
+              </div>
+            </div>
           </div>
-          <button class="btn btn-secondary btn-sm" onclick="printCurrentTab()" title="Print">
-            <i class="bi bi-printer"></i>
-          </button>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+          <div class="col-md-4">
+            <div class="summary-card login">
+              <div class="summary-icon"><i class="bi bi-box-arrow-in-right"></i></div>
+              <div class="summary-content">
+                <div class="summary-value" id="loginCount">0</div>
+                <div class="summary-label">Total Logins</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="summary-card register">
+              <div class="summary-icon"><i class="bi bi-person-plus"></i></div>
+              <div class="summary-content">
+                <div class="summary-value" id="registerCount">0</div>
+                <div class="summary-label">Registrations</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="summary-card booking">
+              <div class="summary-icon"><i class="bi bi-calendar-check"></i></div>
+              <div class="summary-content">
+                <div class="summary-value" id="bookingCount">0</div>
+                <div class="summary-label">Bookings Created</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audit Logs Table -->
+        <div class="card">
+          <div class="card-body">
+            <table id="auditLogsTable" class="table table-striped table-hover">
+              <thead>
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Activity</th>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Email</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="auditLogsBody">
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- Tabs Navigation -->
-      <ul class="nav nav-tabs mb-4" id="auditTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="user-activity-tab" data-bs-toggle="tab" data-bs-target="#user-activity" type="button" role="tab">
-            <i class="bi bi-people me-2"></i>User Activity
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" data-bs-target="#inventory-transactions" type="button" role="tab">
-            <i class="bi bi-box-seam me-2"></i>Inventory Transactions
-          </button>
-        </li>
-      </ul>
+      <!-- Inventory Transactions Tab -->
+      <div class="tab-pane fade" id="inventory-transactions" role="tabpanel">
+        <!-- Inventory Filters -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-2">
+                <label class="form-label">Transaction Type</label>
+                <select id="invTransactionType" class="form-select" onchange="loadInventoryTransactions()">
+                  <option value="all">All Types</option>
+                  <option value="sale">Sales</option>
+                  <option value="restock">Restocks</option>
+                  <option value="adjustment">Adjustments</option>
+                  <option value="wastage">Wastage</option>
+                  <option value="return">Returns</option>
+                  <option value="correction">Corrections</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">From Date</label>
+                <input type="date" id="invStartDate" class="form-control" onchange="loadInventoryTransactions()">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">To Date</label>
+                <input type="date" id="invEndDate" class="form-control" onchange="loadInventoryTransactions()">
+              </div>
 
-      <!-- Tab Content -->
-      <div class="tab-content" id="auditTabsContent">
-        <!-- User Activity Tab -->
-        <div class="tab-pane fade show active" id="user-activity" role="tabpanel">
-          <!-- Filters -->
-          <div class="card mb-4">
-            <div class="card-body">
-              <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                  <label class="form-label">Activity Type</label>
-                  <select id="actionFilter" class="form-select" onchange="loadAuditLogs()">
-                    <option value="all">All Activities</option>
-                    <option value="login">Logins</option>
-                    <option value="register">Registrations</option>
-                    <option value="booking_created">Bookings Created</option>
-                  </select>
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">From Date</label>
-                  <input type="date" id="startDate" class="form-control" onchange="loadAuditLogs()">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">To Date</label>
-                  <input type="date" id="endDate" class="form-control" onchange="loadAuditLogs()">
-                </div>
-                <div class="col-md-3">
-                  <button class="btn btn-secondary w-100" onclick="clearFilters()">
-                    <i class="bi bi-x-circle me-2"></i>Clear Filters
-                  </button>
-                </div>
+              <div class="col-md-3">
+                <button class="btn btn-secondary w-100" onclick="clearInventoryFilters()">
+                  <i class="bi bi-x-circle me-2"></i>Clear Filters
+                </button>
               </div>
-            </div>
-          </div>
-
-          <!-- Summary Cards -->
-          <div class="row mb-4">
-            <div class="col-md-4">
-              <div class="summary-card login">
-                <div class="summary-icon"><i class="bi bi-box-arrow-in-right"></i></div>
-                <div class="summary-content">
-                  <div class="summary-value" id="loginCount">0</div>
-                  <div class="summary-label">Total Logins</div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="summary-card register">
-                <div class="summary-icon"><i class="bi bi-person-plus"></i></div>
-                <div class="summary-content">
-                  <div class="summary-value" id="registerCount">0</div>
-                  <div class="summary-label">Registrations</div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="summary-card booking">
-                <div class="summary-icon"><i class="bi bi-calendar-check"></i></div>
-                <div class="summary-content">
-                  <div class="summary-value" id="bookingCount">0</div>
-                  <div class="summary-label">Bookings Created</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Audit Logs Table -->
-          <div class="card">
-            <div class="card-body">
-              <table id="auditLogsTable" class="table table-striped table-hover">
-                <thead>
-                  <tr>
-                    <th>Date & Time</th>
-                    <th>Activity</th>
-                    <th>User</th>
-                    <th>Role</th>
-                    <th>Email</th>
-                    <th>Details</th>
-                  </tr>
-                </thead>
-                <tbody id="auditLogsBody">
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
 
-        <!-- Inventory Transactions Tab -->
-        <div class="tab-pane fade" id="inventory-transactions" role="tabpanel">
-          <!-- Inventory Filters -->
-          <div class="card mb-4">
-            <div class="card-body">
-              <div class="row g-3 align-items-end">
-                <div class="col-md-2">
-                  <label class="form-label">Transaction Type</label>
-                  <select id="invTransactionType" class="form-select" onchange="loadInventoryTransactions()">
-                    <option value="all">All Types</option>
-                    <option value="sale">Sales</option>
-                    <option value="restock">Restocks</option>
-                    <option value="adjustment">Adjustments</option>
-                    <option value="wastage">Wastage</option>
-                    <option value="return">Returns</option>
-                    <option value="correction">Corrections</option>
-                  </select>
-                </div>
-                <div class="col-md-2">
-                  <label class="form-label">From Date</label>
-                  <input type="date" id="invStartDate" class="form-control" onchange="loadInventoryTransactions()">
-                </div>
-                <div class="col-md-2">
-                  <label class="form-label">To Date</label>
-                  <input type="date" id="invEndDate" class="form-control" onchange="loadInventoryTransactions()">
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Search Item/User</label>
-                  <input type="text" id="invSearch" class="form-control" placeholder="Search..." onkeyup="debounceSearch()">
-                </div>
-                <div class="col-md-3">
-                  <button class="btn btn-secondary w-100" onclick="clearInventoryFilters()">
-                    <i class="bi bi-x-circle me-2"></i>Clear Filters
-                  </button>
-                </div>
+        <!-- Inventory Summary Cards -->
+        <div class="row mb-4">
+          <div class="col-md-4">
+            <div class="summary-card sales">
+              <div class="summary-icon"><i class="bi bi-cart-check"></i></div>
+              <div class="summary-content">
+                <div class="summary-value" id="salesCount">0</div>
+                <div class="summary-label">Total Sales</div>
               </div>
             </div>
           </div>
-
-          <!-- Inventory Summary Cards -->
-          <div class="row mb-4">
-            <div class="col-md-4">
-              <div class="summary-card sales">
-                <div class="summary-icon"><i class="bi bi-cart-check"></i></div>
-                <div class="summary-content">
-                  <div class="summary-value" id="salesCount">0</div>
-                  <div class="summary-label">Total Sales</div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="summary-card restock">
-                <div class="summary-icon"><i class="bi bi-box-arrow-in-down"></i></div>
-                <div class="summary-content">
-                  <div class="summary-value" id="restockCount">0</div>
-                  <div class="summary-label">Restocks</div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="summary-card adjustment">
-                <div class="summary-icon"><i class="bi bi-sliders"></i></div>
-                <div class="summary-content">
-                  <div class="summary-value" id="adjustmentCount">0</div>
-                  <div class="summary-label">Adjustments</div>
-                </div>
+          <div class="col-md-4">
+            <div class="summary-card restock">
+              <div class="summary-icon"><i class="bi bi-box-arrow-in-down"></i></div>
+              <div class="summary-content">
+                <div class="summary-value" id="restockCount">0</div>
+                <div class="summary-label">Restocks</div>
               </div>
             </div>
           </div>
+          <div class="col-md-4">
+            <div class="summary-card adjustment">
+              <div class="summary-icon"><i class="bi bi-sliders"></i></div>
+              <div class="summary-content">
+                <div class="summary-value" id="adjustmentCount">0</div>
+                <div class="summary-label">Adjustments</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-          <!-- Inventory Transactions Table -->
-          <div class="card">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-              <span><i class="bi bi-list-ul me-2"></i>Transaction History</span>
-              <button class="btn btn-light btn-sm" onclick="exportInventoryTransactions()">
-                <i class="bi bi-download me-1"></i>Export CSV
-              </button>
-            </div>
-            <div class="card-body">
-              <table id="inventoryTransactionsTable" class="table table-striped table-hover" style="width:100%">
-                <thead>
-                  <tr>
-                    <th>Date & Time</th>
-                    <th>Item</th>
-                    <th>Category</th>
-                    <th>Type</th>
-                    <th>Qty Before</th>
-                    <th>Change</th>
-                    <th>Qty After</th>
-                    <th>Value</th>
-                    <th>Performed By</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody id="inventoryTransactionsBody">
-                </tbody>
-              </table>
-            </div>
+        <!-- Inventory Transactions Table -->
+        <div class="card">
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-list-ul me-2"></i>Transaction History</span>
+            <button class="btn btn-light btn-sm" onclick="exportInventoryTransactions()">
+              <i class="bi bi-download me-1"></i>Export CSV
+            </button>
+          </div>
+          <div class="card-body">
+            <table id="inventoryTransactionsTable" class="table table-striped table-hover" style="width:100%">
+              <thead>
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Item</th>
+                  <th>Category</th>
+                  <th>Type</th>
+                  <th>Qty Before</th>
+                  <th>Change</th>
+                  <th>Qty After</th>
+                  <th>Value</th>
+                  <th>Performed By</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryTransactionsBody">
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </div>
+  </div>
 
-    <script src="audit_logs.js"></script>
-  </body>
+  <script src="audit_logs.js"></script>
+</body>
+
 </html>
