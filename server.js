@@ -2971,20 +2971,24 @@ Provide recommendations for proactive patient care, follow-up scheduling, and pr
 // ============================================================================
 // SECTION: DOCTOR SCHEDULE API ENDPOINTS
 // ============================================================================
-
 /**
  * GET /doctor-schedules
  * Purpose: Get all schedules for a specific doctor
  */
 app.get("/doctor-schedules", async (req, res) => {
   try {
-    const { doctorId } = req.query;
+    const { doctorId, scheduleDate } = req.query;
 
     if (!doctorId) {
       return res.status(400).json({ message: "Doctor ID is required" });
     }
 
-    const schedules = await DoctorSchedule.find({ doctorId })
+    const query = { doctorId };
+    if (scheduleDate) {
+      query.scheduleDate = scheduleDate;
+    }
+
+    const schedules = await DoctorSchedule.find(query)
       .sort({ scheduleDate: 1 })
       .lean();
 
@@ -4525,28 +4529,36 @@ app.get("/user/appointments", verifyMobileToken, async (req, res) => {
       return res.json([]);
     }
 
-    // Get appointments for this patient
+    // Get appointments for this patient, sorted by creation date (most recently booked first)
     const appointments = await Appointment.find({ patientId: patientProfile._id })
       .populate('doctorId', 'firstname middlename lastname')
-      .sort({ bookingDate: -1, bookingTime: -1 })
+      .sort({ createdAt: -1 })
       .lean();
 
-    // Helper to get specialization name
-    const getSpecialtyName = (specialtyId) => {
-      const specialties = {
-        1: 'Prenatal', 2: 'Post Natal', 3: 'Family Planning', 4: 'Vaccination (Pedia and Adult)',
-        5: 'Ultrasound', 6: 'Laboratory Services', 7: 'ECG', 8: 'Non-stress test for pregnant',
-        9: 'Hearing screening test', 10: '2D Echo', 11: 'Minor Surgery', 12: 'Obgyne',
-        13: 'Pediatrician', 14: 'Surgeon', 15: 'Internal Medicine', 16: 'Urologist',
-        17: 'ENT', 18: 'Opthalmologist', 19: 'Ear Piercing', 20: 'Papsmear'
-      };
-      return specialties[parseInt(specialtyId)] || 'Unknown';
+    // Helper to get specialization name (handles both numeric IDs and already-stored names)
+    const specialtiesMap = {
+      1: 'Prenatal', 2: 'Post Natal', 3: 'Family Planning', 4: 'Vaccination (Pedia and Adult)',
+      5: 'Ultrasound', 6: 'Laboratory Services', 7: 'ECG', 8: 'Non-stress test for pregnant',
+      9: 'Hearing screening test', 10: '2D Echo', 11: 'Minor Surgery', 12: 'Obgyne',
+      13: 'Pediatrician', 14: 'Surgeon', 15: 'Internal Medicine', 16: 'Urologist',
+      17: 'ENT', 18: 'Opthalmologist', 19: 'Ear Piercing', 20: 'Papsmear'
+    };
+    const allSpecNames = Object.values(specialtiesMap);
+    const resolveSpecName = (val) => {
+      if (allSpecNames.includes(val)) return val;
+      return specialtiesMap[parseInt(val)] || val || 'Unknown';
+    };
+    const resolveSpecId = (val) => {
+      const parsed = parseInt(val);
+      if (!isNaN(parsed) && specialtiesMap[parsed]) return String(parsed);
+      const entry = Object.entries(specialtiesMap).find(([, name]) => name === val);
+      return entry ? entry[0] : val;
     };
 
     // Format for mobile app
     const formattedAppointments = appointments.map(apt => {
-      const specialtyId = apt.consultationType;
-      const specialtyName = getSpecialtyName(specialtyId);
+      const specialtyName = resolveSpecName(apt.consultationType);
+      const specialtyId = resolveSpecId(apt.consultationType);
 
       return {
         _id: apt._id.toString(),
@@ -4630,11 +4642,16 @@ app.post("/user/appointments", verifyMobileToken, async (req, res) => {
       formattedDate = `${month}-${day}-${year}`;
     }
 
+    // Convert specialization ID to name to match web booking form format
+    const consultationTypeName = getSpecialtyName(parseInt(specialization)) !== 'Unknown Specialty'
+      ? getSpecialtyName(parseInt(specialization))
+      : specialization;
+
     // Create appointment
     const appointment = new Appointment({
       patientId: patientProfile._id,
       doctorId: doctor,
-      consultationType: specialization,
+      consultationType: consultationTypeName,
       bookingDate: formattedDate,
       bookingTime: time,
       status: 'Booked',
@@ -4693,11 +4710,58 @@ app.put("/user/appointments/:id/cancel", verifyMobileToken, async (req, res) => 
 
     // Update status to Cancelled
     appointment.status = 'Cancelled';
+    // Save cancellation reason if provided
+    if (req.body && req.body.reason) {
+      appointment.reason = req.body.reason;
+    }
     await appointment.save();
 
     res.json({ message: "Appointment cancelled successfully" });
   } catch (error) {
     console.error("Cancel appointment error:", error);
+    return res.status(500).json({ message: "Database error" });
+  }
+});
+
+// PUT /user/appointments/:id/reschedule - Reschedule appointment (mobile)
+app.put("/user/appointments/:id/reschedule", verifyMobileToken, async (req, res) => {
+  try {
+    const appointmentId = req.params.id;
+    const userId = req.userId;
+    const { newDate, newTime } = req.body;
+
+    if (!newDate || !newTime) {
+      return res.status(400).json({ message: "New date and time are required" });
+    }
+
+    const patientProfile = await PatientProfile.findOne({ userId: userId });
+    if (!patientProfile) {
+      return res.status(404).json({ message: "Patient profile not found" });
+    }
+
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    if (appointment.patientId.toString() !== patientProfile._id.toString()) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    // Convert date format if needed (YYYY-MM-DD -> MM-DD-YYYY)
+    let formattedDate = newDate;
+    if (newDate.includes('-') && newDate.split('-')[0].length === 4) {
+      const [year, month, day] = newDate.split('-');
+      formattedDate = `${month}-${day}-${year}`;
+    }
+
+    appointment.bookingDate = formattedDate;
+    appointment.bookingTime = newTime;
+    await appointment.save();
+
+    res.json({ message: "Appointment rescheduled successfully" });
+  } catch (error) {
+    console.error("Reschedule appointment error:", error);
     return res.status(500).json({ message: "Database error" });
   }
 });

@@ -121,6 +121,7 @@ function formatDateToDB(dateString) {
 }
 
 let currentDate = new Date();
+let doctorAvailableDates = {}; // { "MM-DD-YYYY": scheduleObj, ... }
 
 function renderCalendar(date) {
   const year = date.getFullYear();
@@ -166,8 +167,19 @@ function renderCalendar(date) {
         cellDate.setHours(0, 0, 0, 0);
 
         const isPast = cellDate < today;
-        const disabledAttr = isPast ? "disabled" : "";
-        const disabledClass = isPast ? "btn-secondary disabled" : "btn-light";
+        const dateStr = `${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}-${year}`;
+        const doctorId = $("#doctorSelect").val();
+        const hasSchedule = !doctorId || doctorAvailableDates[dateStr];
+        const isDisabled = isPast || (doctorId && !hasSchedule);
+        const disabledAttr = isDisabled ? "disabled" : "";
+        let disabledClass = "btn-light";
+        if (isPast) {
+          disabledClass = "btn-secondary disabled";
+        } else if (doctorId && !hasSchedule) {
+          disabledClass = "btn-outline-secondary disabled";
+        } else if (doctorId && hasSchedule) {
+          disabledClass = "btn-success";
+        }
 
         row += `<td>
                 <button class="btn btn-lg ${disabledClass} calendar-day" 
@@ -254,6 +266,9 @@ $(document).ready(function () {
     renderCalendar(currentDate);
   });
 
+  // Also clear doctor availability when consultation type changes (doctor dropdown resets)
+  $("#consultationType").one("__init", function() {}); // placeholder, actual handler below
+
   $(document).on("click", ".calendar-day", function () {
     const day = $(this).data("day");
     const month = $(this).data("month");
@@ -287,8 +302,58 @@ $(document).ready(function () {
     }
   });
 
+  // When doctor changes, fetch all their schedules and re-render calendar
+  $("#doctorSelect").on("change", function () {
+    const doctorId = $(this).val();
+    // Clear previous selection
+    $("#selectedDate").val("");
+    $("#selectedTime").val("");
+    $(".buttonTime").removeClass("selected-time");
+    $(".schedule-message").remove();
+    $(".buttonTime").not("#nextBtn").addClass("disabled").attr("disabled", true);
+    updateNextButtonState();
+
+    if (!doctorId) {
+      doctorAvailableDates = {};
+      renderCalendar(currentDate);
+      return;
+    }
+
+    // Fetch ALL schedules for this doctor
+    $.ajax({
+      url: "/doctor-schedules",
+      method: "GET",
+      data: { doctorId: doctorId },
+      success: function (response) {
+        doctorAvailableDates = {};
+        if (response.success && response.data) {
+          response.data.forEach(function (schedule) {
+            if (schedule.isAvailable !== false && schedule.timeSlots && schedule.timeSlots.length > 0) {
+              doctorAvailableDates[schedule.scheduleDate] = schedule;
+            }
+          });
+        }
+        renderCalendar(currentDate);
+      },
+      error: function () {
+        doctorAvailableDates = {};
+        renderCalendar(currentDate);
+      }
+    });
+  });
+
   $("#consultationType").on("change", function () {
     const typeId = $(this).val();
+
+    // Clear doctor availability and selections when consultation type changes
+    doctorAvailableDates = {};
+    $("#selectedDate").val("");
+    $("#selectedTime").val("");
+    $(".buttonTime").removeClass("selected-time");
+    $(".schedule-message").remove();
+    $(".buttonTime").not("#nextBtn").addClass("disabled").attr("disabled", true);
+    renderCalendar(currentDate);
+    updateNextButtonState();
 
     if (typeId) {
       $.ajax({
@@ -449,31 +514,95 @@ function onDateClick(year, month, day) {
 
   $(".calendar-day").removeClass("selected-date");
   $("#selectedDate").val(formattedDate).trigger("change");
+  // Clear previously selected time when date changes
+  $("#selectedTime").val("");
+  $(".buttonTime").removeClass("selected-time");
 
   $(
     `.calendar-day[data-day='${day}'][data-month='${month}'][data-year='${year}']`
   ).addClass("selected-date");
 
-  // Time button control
   const isToday = selectedDate.toDateString() === now.toDateString();
+  const doctorId = $("#doctorSelect").val();
 
-  $(".buttonTime").each(function () {
-    const timeRange = $(this).text().trim(); // e.g., "8:00 AM - 9:00 AM"
-    const [startTimeStr] = timeRange.split(" - ");
-    const startDateTime = new Date(selectedDate);
+  // Remove any previous schedule message
+  $(".schedule-message").remove();
 
-    const [time, meridian] = startTimeStr.split(" ");
-    let [hours, minutes] = time.split(":").map(Number);
+  if (!doctorId) {
+    // No doctor selected — disable all time buttons and show message
+    $(".buttonTime").not("#nextBtn").addClass("disabled").attr("disabled", true);
+    $(".buttons-time").prepend(
+      '<p class="schedule-message text-warning fw-bold mb-2">Please select a doctor first to see available time slots.</p>'
+    );
+    updateNextButtonState();
+    return;
+  }
 
-    if (meridian === "PM" && hours !== 12) hours += 12;
-    if (meridian === "AM" && hours === 12) hours = 0;
+  // Fetch doctor's schedule for the selected date
+  $.ajax({
+    url: "/doctor-schedules",
+    method: "GET",
+    data: { doctorId: doctorId, scheduleDate: formattedDate },
+    success: function (response) {
+      const schedule = response.success && response.data && response.data.length > 0
+        ? response.data[0]
+        : null;
 
-    startDateTime.setHours(hours, minutes, 0, 0);
+      const availableSlots = (schedule && schedule.isAvailable !== false && schedule.timeSlots)
+        ? schedule.timeSlots
+        : [];
 
-    if (isToday && startDateTime < now) {
-      $(this).addClass("disabled").attr("disabled", true);
-    } else {
-      $(this).removeClass("disabled").attr("disabled", false);
+      $(".buttonTime").not("#nextBtn").each(function () {
+        const timeRange = $(this).text().trim();
+        const [startTimeStr] = timeRange.split(" - ");
+        const startDateTime = new Date(selectedDate);
+
+        const [time, meridian] = startTimeStr.split(" ");
+        let [hours, minutes] = time.split(":").map(Number);
+
+        if (meridian === "PM" && hours !== 12) hours += 12;
+        if (meridian === "AM" && hours === 12) hours = 0;
+
+        startDateTime.setHours(hours, minutes, 0, 0);
+
+        // Disable if: past time today, OR not in doctor's available slots
+        if ((isToday && startDateTime < now) || (availableSlots.length > 0 && !availableSlots.includes(timeRange)) || availableSlots.length === 0) {
+          $(this).addClass("disabled").attr("disabled", true);
+        } else {
+          $(this).removeClass("disabled").attr("disabled", false);
+        }
+      });
+
+      if (availableSlots.length === 0) {
+        $(".buttons-time").prepend(
+          '<p class="schedule-message text-danger fw-bold mb-2">The selected doctor has no available schedule for this date.</p>'
+        );
+      }
+
+      updateNextButtonState();
+    },
+    error: function () {
+      // On error, fall back to enabling all non-past time slots
+      $(".buttonTime").not("#nextBtn").each(function () {
+        const timeRange = $(this).text().trim();
+        const [startTimeStr] = timeRange.split(" - ");
+        const startDateTime = new Date(selectedDate);
+
+        const [time, meridian] = startTimeStr.split(" ");
+        let [hours, minutes] = time.split(":").map(Number);
+
+        if (meridian === "PM" && hours !== 12) hours += 12;
+        if (meridian === "AM" && hours === 12) hours = 0;
+
+        startDateTime.setHours(hours, minutes, 0, 0);
+
+        if (isToday && startDateTime < now) {
+          $(this).addClass("disabled").attr("disabled", true);
+        } else {
+          $(this).removeClass("disabled").attr("disabled", false);
+        }
+      });
+      updateNextButtonState();
     }
   });
 }
