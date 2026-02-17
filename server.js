@@ -6969,11 +6969,26 @@ app.post("/updateDoctorInfo", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    user.firstname = firstname;
+    // Only update fields that are provided
+    if (firstname) user.firstname = firstname;
     user.middlename = middlename || null;
-    user.lastname = lastname;
-    user.gender = gender;
-    user.birthdate = new Date(birthdate);
+    if (lastname) user.lastname = lastname;
+    if (gender && ['Male', 'Female', 'Other'].includes(gender)) {
+      user.gender = gender;
+    } else if (gender) {
+      return res.status(400).json({ message: "Invalid gender" });
+    }
+    if (birthdate) {
+      const parsedDate = new Date(birthdate);
+      if (!isNaN(parsedDate.getTime())) {
+        user.birthdate = parsedDate;
+      } else {
+        return res.status(400).json({ message: "Invalid birthdate" });
+      }
+    }
+    if (age && isNaN(age)) {
+      return res.status(400).json({ message: "Age must be a number" });
+    }
     user.age = age || null;
     user.phone = contactNumber || null;
 
