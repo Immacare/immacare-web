@@ -10,6 +10,10 @@
  */
 
 require('dotenv').config();
+const dns = require('dns');
+
+// Force Node.js to prefer IPv4 over IPv6 to avoid connect timeout issues
+dns.setDefaultResultOrder('ipv4first');
 
 /**
  * Send email using Resend HTTP API
@@ -17,26 +21,41 @@ require('dotenv').config();
  * @returns {Promise<Object>} API response
  */
 async function sendEmailViaResendAPI(mailOptions) {
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from: mailOptions.from,
-      to: mailOptions.to,
-      subject: mailOptions.subject,
-      html: mailOptions.html
-    })
-  });
+  const maxRetries = 2;
+  let lastError;
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(`Resend API error: ${JSON.stringify(errorData)}`);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: mailOptions.from,
+          to: mailOptions.to,
+          subject: mailOptions.subject,
+          html: mailOptions.html
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Resend API error: ${JSON.stringify(errorData)}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      lastError = err;
+      console.error(`Email send attempt ${attempt}/${maxRetries} failed:`, err.message);
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
   }
 
-  return await response.json();
+  throw lastError;
 }
 
 /**
