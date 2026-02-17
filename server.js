@@ -7137,14 +7137,13 @@ app.get("/getDoctorsList", async (req, res) => {
 
     // Filter by doctor name if provided
     if (doctorName) {
-      const searchTerm = doctorName.toLowerCase();
+      const searchTerms = doctorName.toLowerCase().trim().split(/\s+/);
       doctors = doctors.filter(doctor => {
         const user = doctor.userId;
         if (!user) return false;
         const fullName = `${user.firstname || ''} ${user.middlename || ''} ${user.lastname || ''}`.toLowerCase();
-        return fullName.includes(searchTerm) ||
-          (user.firstname && user.firstname.toLowerCase().includes(searchTerm)) ||
-          (user.lastname && user.lastname.toLowerCase().includes(searchTerm));
+        // Check if all search terms are found in the full name
+        return searchTerms.every(term => fullName.includes(term));
       });
     }
 
