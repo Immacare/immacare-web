@@ -156,61 +156,76 @@ function saveUser() {
   const password2 = $("#addPasswordconfirm").val();
   const status = $("#addStatus").val();
 
+  // Validate all required fields
+  let hasEmptyField = false;
   $(".addInput").each(function () {
     if ($(this).val() == null || $(this).val().trim() === "") {
-      Swal.fire({
-        title: "",
-        text: "Please complete all required fields.",
-        icon: "error",
-      });
-    } else if (password !== password2) {
-      Swal.fire({
-        title: "",
-        text: "Password Mismatch",
-        icon: "error",
-      });
-    } else {
-      Swal.fire({
-        title: "Are you sure?",
-        text: "Do you want to create this account?",
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonColor: "#28a745",
-        confirmButtonText: "Yes, create!",
-        backdrop: false,
-      }).then((result) => {
-        if (result.isConfirmed) {
-          $.ajax({
-            url: "/createAccount",
-            method: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-              firstname,
-              middlename,
-              lastname,
-              gender,
-              birthdate,
-              email,
-              password,
-              role,
-              status,
-            }),
-            success: function (response) {
-              Swal.fire({
-                icon: "success",
-                title: "Account Created!",
-                text: "Account has been created successfully.",
-              }).then(() => {
-                $("#addUserModal").modal("hide");
-                $(".addInput").val("");
-                table.ajax.reload();
-              });
-            },
-            error: function (xhr) {
-              alert("Error: " + xhr.responseJSON.message);
-            },
+      hasEmptyField = true;
+      return false; // Break out of loop
+    }
+  });
+
+  if (hasEmptyField) {
+    Swal.fire({
+      title: "",
+      text: "Please complete all required fields.",
+      icon: "error",
+    });
+    return;
+  }
+
+  if (password !== password2) {
+    Swal.fire({
+      title: "",
+      text: "Password Mismatch",
+      icon: "error",
+    });
+    return;
+  }
+
+  Swal.fire({
+    title: "Are you sure?",
+    text: "Do you want to create this account?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "#28a745",
+    confirmButtonText: "Yes, create!",
+    backdrop: false,
+  }).then((result) => {
+    if (result.isConfirmed) {
+      $.ajax({
+        url: "/createAccount",
+        method: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({
+          firstname,
+          middlename,
+          lastname,
+          gender,
+          birthdate,
+          email,
+          password,
+          role,
+          status,
+        }),
+        success: function (response) {
+          Swal.fire({
+            icon: "success",
+            title: "Account Created!",
+            text: "Account has been created successfully.",
+          }).then(() => {
+            $("#addUserModal").modal("hide");
+            $(".addInput").val("");
+            table.ajax.reload();
           });
-        }
+        },
+        error: function (xhr) {
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: xhr.responseJSON?.message || "Something went wrong.",
+          });
+        },
       });
     }
   });

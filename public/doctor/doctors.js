@@ -680,7 +680,6 @@ function getSession() {
         $("#doctorsName, #specialtySearch").removeClass("readonly");
         $("#doctorsName, #specialtySearch").prop("readonly", false);
         $("#doctorsName, #specialtySearch").prop("disabled", false);
-        $("#updateButton").hide();
 
         // Only call getProfessionalInfo on pages that actually have a user_id set
         if ($("#user_id").length && $("#user_id").val()) {
